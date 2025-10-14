@@ -1,12 +1,12 @@
 import React from 'react';
 import { StatusBar } from 'react-native';
 import { Provider as PaperProvider, MD3LightTheme as DefaultTheme } from 'react-native-paper';
-import { MaterialCommunityIcons } from '@expo/vector-icons'; // ✅ Forzar íconos Expo
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AuthProvider } from './src/contexts/AuthContext';
 import { CartProvider } from './src/contexts/CartContext';
 import AppNavigator from './src/navigation/AppNavigator';
 
-// 🎨 Tema Material 3 con tu paleta personalizada
+// 🎨 Tema Material 3 con paleta personalizada
 const theme = {
   ...DefaultTheme,
   colors: {
@@ -21,7 +21,6 @@ const theme = {
     surface: '#ffffff',
     onPrimary: '#ffffff',
   },
-  // ⚡ Forzar Paper a usar íconos de Expo
   icon: (props: any) => <MaterialCommunityIcons {...props} />,
 };
 
