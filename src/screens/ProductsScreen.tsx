@@ -3,14 +3,17 @@ import { SafeAreaView, FlatList, StyleSheet, Animated, View, Alert } from 'react
 import { Text, Surface, useTheme, IconButton, Badge, FAB } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import ProductCard from '../components/ProductCard';
-import { PRODUCTS } from '../data/products';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useProducts } from '../contexts/ProductContext'; // 👈
 
 export default function ProductsScreen({ navigation }: any) {
   const { add, items, clear } = useCart();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
+  const { products, deleteProduct } = useProducts(); // 👈
   const theme = useTheme();
+
+  const isAdmin = user?.role === 'admin'; // 👑
 
   const cartItemsCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -24,17 +27,16 @@ export default function ProductsScreen({ navigation }: any) {
     }).start();
   }, []);
 
-  const handleClearCart = () => {
-    if (!cartItemsCount) return;
-    Alert.alert('Vaciar carrito', '¿Deseas eliminar todos los productos?', [
+  const handleDeleteProduct = (id: string) => {
+    Alert.alert('Eliminar producto', '¿Seguro que deseas eliminar este producto?', [
       { text: 'Cancelar', style: 'cancel' },
-      { text: 'Vaciar', style: 'destructive', onPress: clear },
+      { text: 'Eliminar', style: 'destructive', onPress: () => deleteProduct(id) },
     ]);
   };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      {/* Encabezado personalizado */}
+      {/* Encabezado */}
       <Surface elevation={3} style={styles.header}>
         <View>
           <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant }}>
@@ -74,7 +76,7 @@ export default function ProductsScreen({ navigation }: any) {
             <IconButton
               icon={() => <Ionicons name="trash-outline" size={22} color="#fff" />}
               style={{ backgroundColor: theme.colors.error }}
-              onPress={handleClearCart}
+              onPress={clear}
             />
           )}
 
@@ -83,12 +85,11 @@ export default function ProductsScreen({ navigation }: any) {
             icon={() => <Ionicons name="log-out-outline" size={22} color={theme.colors.error} />}
             onPress={logout}
             style={styles.logoutBtn}
-            mode="contained-tonal"
           />
         </View>
       </Surface>
 
-      {/* Lista de productos animada */}
+      {/* Lista de productos */}
       <Animated.View
         style={{
           flex: 1,
@@ -104,16 +105,35 @@ export default function ProductsScreen({ navigation }: any) {
         }}
       >
         <FlatList
-          data={PRODUCTS}
+          data={products}
           keyExtractor={(p) => p.id}
-          renderItem={({ item }) => <ProductCard product={item} onAdd={add} />}
+          renderItem={({ item }) => (
+            <ProductCard
+              product={item}
+              onAdd={add}
+              // 👇 Estos props solo para admins
+              onEdit={isAdmin ? () => navigation.navigate('EditProduct', { product: item }) : undefined}
+              onDelete={isAdmin ? () => handleDeleteProduct(item.id) : undefined}
+              isAdmin={isAdmin}
+            />
+          )}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
         />
       </Animated.View>
 
-      {/* Botón flotante de carrito */}
-      {cartItemsCount > 0 && (
+      {/* Botón flotante solo para admins */}
+      {isAdmin && (
+        <FAB
+          icon="plus"
+          label="Agregar"
+          style={[styles.fab, { backgroundColor: theme.colors.primary }]}
+          onPress={() => navigation.navigate('EditProduct')}
+        />
+      )}
+
+      {/* Botón flotante de carrito solo para usuarios normales */}
+      {!isAdmin && cartItemsCount > 0 && (
         <FAB
           icon="cart-check"
           label={`Ver carrito (${cartItemsCount})`}
@@ -138,23 +158,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: '#fff',
   },
-  actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  listContent: {
-    paddingHorizontal: 12,
-    paddingBottom: 90,
-  },
-  fab: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-    borderRadius: 30,
-    elevation: 6,
-  },
-  logoutBtn: {
-    backgroundColor: '#fff',
-  },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  listContent: { paddingHorizontal: 12, paddingBottom: 90 },
+  fab: { position: 'absolute', bottom: 20, right: 20, borderRadius: 30, elevation: 6 },
+  logoutBtn: { backgroundColor: '#fff' },
 });

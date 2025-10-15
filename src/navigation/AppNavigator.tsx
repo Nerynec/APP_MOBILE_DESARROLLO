@@ -1,5 +1,4 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator, TransitionPresets } from '@react-navigation/stack';
 import { StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,7 +19,7 @@ const Stack = createStackNavigator();
 
 export default function AppNavigator() {
   const { user } = useAuth();
-  const cart = useCart(); // ✅ Contexto del carrito
+  const cart = useCart();
 
   const commonScreenOptions = {
     headerBackground: () => (
@@ -42,72 +41,70 @@ export default function AppNavigator() {
   };
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator screenOptions={commonScreenOptions}>
-        {user ? (
-          <>
-            <Stack.Screen
-              name="Products"
-              component={ProductsScreen}
-              options={({ navigation }) => ({
-                title: '🛍️ Productos',
-                headerRight: () => (
-                  <AppNavigatorHeader navigation={navigation} cart={cart} />
-                ),
-              })}
-            />
-            <Stack.Screen
-              name="Cart"
-              component={CartScreen}
-              options={({ navigation }) => ({
-                title: '🛒 Carrito',
-                headerRight: () => (
-                  <AppNavigatorHeader navigation={navigation} cart={cart} />
-                ),
-              })}
-            />
-            <Stack.Screen
-              name="Checkout"
-              component={CheckoutScreen}
-              options={{
-                title: '💳 Finalizar Compra',
-                gestureEnabled: false,
-              }}
-            />
-            <Stack.Screen
-              name="Dashboard"
-              component={DashboardScreen}
-              options={{ title: '📊 Dashboard' }}
-            />
-            <Stack.Screen
-              name="Compras"
-              component={ComprasScreen}
-              options={{ title: '🧾 Compras' }}
-            />
-            <Stack.Screen
-              name="Reporteria"
-              component={ReporteriaScreen}
-              options={{ title: '📈 Reportería' }}
-            />
-          </>
-        ) : (
-          <>
-            <Stack.Screen
-              name="Login"
-              component={LoginScreen}
-              options={{
-                headerShown: false,
-                animationTypeForReplace: user ? 'pop' : 'push',
-              }}
-            />
-            <Stack.Screen
-              name="Register"
-              component={RegisterScreen}
-              options={{ headerShown: false }}
-            />
-          </>
-        )}
-      </Stack.Navigator>
-    </NavigationContainer>
+    <Stack.Navigator screenOptions={commonScreenOptions}>
+      {user ? (
+        <>
+          <Stack.Screen
+            name="Products"
+            component={ProductsScreen}
+            options={({ navigation }) => ({
+              title: '🛍️ Productos',
+              headerRight: () => (
+                <AppNavigatorHeader navigation={navigation} cart={cart} />
+              ),
+            })}
+          />
+          <Stack.Screen
+            name="Cart"
+            component={CartScreen}
+            options={({ navigation }) => ({
+              title: '🛒 Carrito',
+              headerRight: () => (
+                <AppNavigatorHeader navigation={navigation} cart={cart} />
+              ),
+            })}
+          />
+          <Stack.Screen
+            name="Checkout"
+            component={CheckoutScreen}
+            options={{
+              title: '💳 Finalizar Compra',
+              gestureEnabled: false,
+            }}
+          />
+          <Stack.Screen
+            name="Dashboard"
+            component={DashboardScreen}
+            options={{ title: '📊 Dashboard' }}
+          />
+          <Stack.Screen
+            name="Compras"
+            component={ComprasScreen}
+            options={{ title: '🧾 Compras' }}
+          />
+          <Stack.Screen
+            name="Reporteria"
+            component={ReporteriaScreen}
+            options={{ title: '📈 Reportería' }}
+          />
+        </>
+      ) : (
+        <>
+          <Stack.Screen
+            name="Login"
+            component={LoginScreen}
+            options={{
+              headerShown: false,
+              animationTypeForReplace: user ? 'pop' : 'push',
+            }}
+          />
+          <Stack.Screen
+            name="Register"
+            component={RegisterScreen}
+            options={{ headerShown: false }}
+          />
+        </>
+      )}
+    </Stack.Navigator>
   );
 }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { SafeAreaView, StyleSheet, KeyboardAvoidingView, Platform, View } from 'react-native';
+import { SafeAreaView, StyleSheet, KeyboardAvoidingView, Platform, View, Alert } from 'react-native';
 import { Text, TextInput, Button, Card, useTheme } from 'react-native-paper';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -13,20 +13,26 @@ export default function RegisterScreen({ navigation }: any) {
 
   const onRegister = async () => {
     if (!username.trim() || !password.trim()) {
+      Alert.alert('Campos vacíos', 'Por favor, llena todos los campos.');
       return;
     }
     if (password.length < 6) {
+      Alert.alert('Contraseña corta', 'La contraseña debe tener al menos 6 caracteres.');
       return;
     }
     if (password !== confirmPassword) {
+      Alert.alert('Error', 'Las contraseñas no coinciden.');
       return;
     }
+
     try {
       setLoading(true);
       await register({ username, password });
+      Alert.alert('Cuenta creada 🎉', 'Tu cuenta ha sido registrada con éxito.');
       navigation?.goBack();
     } catch (e: any) {
-      // manejar error
+      console.error('Error en registro:', e);
+      Alert.alert('Error al registrar', e.message || 'No se pudo crear la cuenta.');
     } finally {
       setLoading(false);
     }
