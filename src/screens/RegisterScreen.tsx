@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { SafeAreaView, StyleSheet, KeyboardAvoidingView, Platform, View } from 'react-native';
+import { SafeAreaView, StyleSheet, KeyboardAvoidingView, Platform, View, Alert } from 'react-native';
 import { Text, TextInput, Button, Card, useTheme } from 'react-native-paper';
 import { useAuth } from '../contexts/AuthContext';
 

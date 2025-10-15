@@ -26,7 +26,8 @@ const mapApiToUi = (p: ApiProduct): UiProduct => ({
 
 export default function ProductsScreen({ navigation }: any) {
   const { add, items, clear } = useCart();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
+  const { products, deleteProduct } = useProducts(); // 👈
   const theme = useTheme();
 
   const [search, setSearch] = useState('');
@@ -86,11 +87,10 @@ export default function ProductsScreen({ navigation }: any) {
     Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
   }, []);
 
-  const handleClearCart = () => {
-    if (!cartItemsCount) return;
-    Alert.alert('Vaciar carrito', '¿Deseas eliminar todos los productos?', [
+  const handleDeleteProduct = (id: string) => {
+    Alert.alert('Eliminar producto', '¿Seguro que deseas eliminar este producto?', [
       { text: 'Cancelar', style: 'cancel' },
-      { text: 'Vaciar', style: 'destructive', onPress: clear },
+      { text: 'Eliminar', style: 'destructive', onPress: () => deleteProduct(id) },
     ]);
   };
 
@@ -164,23 +164,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: '#fff',
   },
-  actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  listContent: {
-    paddingHorizontal: 12,
-    paddingBottom: 90,
-  },
-  fab: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-    borderRadius: 30,
-    elevation: 6,
-  },
-  logoutBtn: {
-    backgroundColor: '#fff',
-  },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  listContent: { paddingHorizontal: 12, paddingBottom: 90 },
+  fab: { position: 'absolute', bottom: 20, right: 20, borderRadius: 30, elevation: 6 },
+  logoutBtn: { backgroundColor: '#fff' },
 });
