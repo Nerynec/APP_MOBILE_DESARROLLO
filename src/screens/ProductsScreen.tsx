@@ -26,8 +26,7 @@ const mapApiToUi = (p: ApiProduct): UiProduct => ({
 
 export default function ProductsScreen({ navigation }: any) {
   const { add, items, clear } = useCart();
-  const { user, logout } = useAuth();
-  const { products, deleteProduct } = useProducts(); // 👈
+  const { logout } = useAuth();
   const theme = useTheme();
 
   const [search, setSearch] = useState('');
@@ -87,10 +86,11 @@ export default function ProductsScreen({ navigation }: any) {
     Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
   }, []);
 
-  const handleDeleteProduct = (id: string) => {
-    Alert.alert('Eliminar producto', '¿Seguro que deseas eliminar este producto?', [
+  const handleClearCart = () => {
+    if (!cartItemsCount) return;
+    Alert.alert('Vaciar carrito', '¿Deseas eliminar todos los productos?', [
       { text: 'Cancelar', style: 'cancel' },
-      { text: 'Eliminar', style: 'destructive', onPress: () => deleteProduct(id) },
+      { text: 'Vaciar', style: 'destructive', onPress: clear },
     ]);
   };
 
@@ -150,6 +150,7 @@ export default function ProductsScreen({ navigation }: any) {
   );
 }
 
+// ... styles iguales a los tuyos
 
 
 const styles = StyleSheet.create({
