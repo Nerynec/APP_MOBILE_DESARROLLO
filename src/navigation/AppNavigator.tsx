@@ -14,6 +14,7 @@ import CheckoutScreen from '../screens/CheckoutScreen';
 import DashboardScreen from '../screens/DashboardScreen';
 import ComprasScreen from '../screens/ComprasScreen';
 import ReporteriaScreen from '../screens/ReporteriaScreen';
+import InventoryScreen from '../screens/InventoryScreen';
 
 const Stack = createStackNavigator();
 
@@ -86,6 +87,11 @@ export default function AppNavigator() {
             name="Reporteria"
             component={ReporteriaScreen}
             options={{ title: '📈 Reportería' }}
+          />
+          <Stack.Screen
+            name="Inventory"
+            component={InventoryScreen}
+            options={{ title: '📦 Inventario' }}
           />
         </>
       ) : (

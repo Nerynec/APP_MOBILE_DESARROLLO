@@ -2,10 +2,12 @@ import React from 'react';
 import { StatusBar } from 'react-native';
 import { Provider as PaperProvider, MD3LightTheme as DefaultTheme } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { NavigationContainer } from '@react-navigation/native'; // 👈 AÑADIDO
+import { NavigationContainer } from '@react-navigation/native';
 import { AuthProvider } from './src/contexts/AuthContext';
 import { CartProvider } from './src/contexts/CartContext';
 import { ProductProvider } from './src/contexts/ProductContext';
+import { InventoryProvider } from './src/contexts/InventoryContext';
+import { PurchaseProvider } from './src/contexts/PurchaseContext';
 import AppNavigator from './src/navigation/AppNavigator';
 
 // 🎨 Tema Material 3 con paleta personalizada
@@ -33,10 +35,11 @@ export default function App() {
       <AuthProvider>
         <CartProvider>
           <ProductProvider>
-            {/* 👇 Aquí estaba el problema: envolver en NavigationContainer */}
-            <NavigationContainer>
-              <AppNavigator />
-            </NavigationContainer>
+            <InventoryProvider>
+              <NavigationContainer>
+                <AppNavigator />
+              </NavigationContainer>
+            </InventoryProvider>
           </ProductProvider>
         </CartProvider>
       </AuthProvider>
