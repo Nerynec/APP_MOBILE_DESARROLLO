@@ -1,13 +1,20 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { SafeAreaView, StyleSheet, KeyboardAvoidingView, Platform, Animated, View } from 'react-native';
-import { Text, TextInput, Button, Card, useTheme } from 'react-native-paper';
-import { useAuth } from '../contexts/AuthContext';
+import React, { useState, useRef, useEffect } from "react";
+import {
+  SafeAreaView,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  Animated,
+  View,
+} from "react-native";
+import { Text, TextInput, Button, Card, useTheme } from "react-native-paper";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function LoginScreen({ navigation }: any) {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState({ username: '', password: '' });
+  const [errors, setErrors] = useState({ username: "", password: "" });
   const { login } = useAuth();
   const theme = useTheme();
 
@@ -22,22 +29,22 @@ export default function LoginScreen({ navigation }: any) {
   }, []);
 
   const validateForm = () => {
-    const newErrors = { username: '', password: '' };
+    const newErrors = { username: "", password: "" };
     let isValid = true;
 
     if (!username.trim()) {
-      newErrors.username = 'El usuario es requerido';
+      newErrors.username = "El usuario es requerido";
       isValid = false;
     } else if (username.length < 3) {
-      newErrors.username = 'Debe tener al menos 3 caracteres';
+      newErrors.username = "Debe tener al menos 3 caracteres";
       isValid = false;
     }
 
     if (!password) {
-      newErrors.password = 'La contraseña es requerida';
+      newErrors.password = "La contraseña es requerida";
       isValid = false;
     } else if (password.length < 6) {
-      newErrors.password = 'Debe tener al menos 6 caracteres';
+      newErrors.password = "Debe tener al menos 6 caracteres";
       isValid = false;
     }
 
@@ -45,21 +52,28 @@ export default function LoginScreen({ navigation }: any) {
     return isValid;
   };
 
-  const onLogin = async () => {
-    if (!validateForm()) return;
-    setIsLoading(true);
-    try {
-      await login({ username: username.trim(), password });
-    } catch (e: any) {
-      console.log('Error login', e);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // ... dentro de LoginScreen (tu mismo archivo)
+  // LoginScreen.tsx
+const onLogin = async () => {
+  if (!validateForm()) return;
+  setIsLoading(true);
+  try {
+    await login({ email: username.trim(), password }); // 👈 usa email
+    navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+  } catch (e: any) {
+    setErrors((prev) => ({ ...prev, password: e?.message || 'Error al iniciar sesión' }));
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+      >
         <Animated.View
           style={{
             flex: 1,
@@ -76,10 +90,16 @@ export default function LoginScreen({ navigation }: any) {
         >
           <View style={styles.header}>
             <Text variant="displaySmall">🔩</Text>
-            <Text variant="headlineLarge" style={{ fontWeight: '800', color: theme.colors.primary }}>
+            <Text
+              variant="headlineLarge"
+              style={{ fontWeight: "800", color: theme.colors.primary }}
+            >
               Tornillo Feliz
             </Text>
-            <Text variant="bodyLarge" style={{ color: theme.colors.onSurfaceVariant }}>
+            <Text
+              variant="bodyLarge"
+              style={{ color: theme.colors.onSurfaceVariant }}
+            >
               Bienvenido de nuevo
             </Text>
           </View>
@@ -93,7 +113,7 @@ export default function LoginScreen({ navigation }: any) {
                 value={username}
                 onChangeText={(text) => {
                   setUsername(text);
-                  if (errors.username) setErrors({ ...errors, username: '' });
+                  if (errors.username) setErrors({ ...errors, username: "" });
                 }}
                 left={<TextInput.Icon icon="account" />}
                 error={!!errors.username}
@@ -102,7 +122,9 @@ export default function LoginScreen({ navigation }: any) {
                 autoCapitalize="none"
               />
               {errors.username ? (
-                <Text style={{ color: theme.colors.error, fontSize: 12 }}>{errors.username}</Text>
+                <Text style={{ color: theme.colors.error, fontSize: 12 }}>
+                  {errors.username}
+                </Text>
               ) : null}
 
               <TextInput
@@ -112,7 +134,7 @@ export default function LoginScreen({ navigation }: any) {
                 value={password}
                 onChangeText={(text) => {
                   setPassword(text);
-                  if (errors.password) setErrors({ ...errors, password: '' });
+                  if (errors.password) setErrors({ ...errors, password: "" });
                 }}
                 secureTextEntry
                 left={<TextInput.Icon icon="lock" />}
@@ -122,7 +144,9 @@ export default function LoginScreen({ navigation }: any) {
                 autoCapitalize="none"
               />
               {errors.password ? (
-                <Text style={{ color: theme.colors.error, fontSize: 12 }}>{errors.password}</Text>
+                <Text style={{ color: theme.colors.error, fontSize: 12 }}>
+                  {errors.password}
+                </Text>
               ) : null}
 
               <Button
@@ -139,7 +163,7 @@ export default function LoginScreen({ navigation }: any) {
 
               <Button
                 mode="outlined"
-                onPress={() => navigation.navigate('Register')}
+                onPress={() => navigation.navigate("Register")}
                 disabled={isLoading}
                 style={{
                   marginTop: 12,
@@ -161,18 +185,18 @@ export default function LoginScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f3f7fb',
-    justifyContent: 'center',
+    backgroundColor: "#f3f7fb",
+    justifyContent: "center",
   },
   header: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 24,
   },
   card: {
     marginHorizontal: 20,
     borderRadius: 20,
     paddingVertical: 16,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     elevation: 6,
   },
   input: {

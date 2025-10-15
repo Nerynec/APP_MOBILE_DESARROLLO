@@ -4,29 +4,38 @@ import { Text, TextInput, Button, Card, useTheme } from 'react-native-paper';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function RegisterScreen({ navigation }: any) {
-  const [username, setUsername] = useState('');
+  const theme = useTheme();
+  const { register } = useAuth();
+
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { register } = useAuth();
-  const theme = useTheme();
+  const [errors, setErrors] = useState<{ fullName?: string; email?: string; password?: string; confirmPassword?: string; general?: string }>({});
+
+  const validate = () => {
+    const e: typeof errors = {};
+    if (!fullName.trim()) e.fullName = 'Tu nombre es requerido';
+    if (!email.trim()) e.email = 'El email es requerido';
+    else if (!/^\S+@\S+\.\S+$/.test(email.trim())) e.email = 'Ingresa un email válido';
+    if (!password) e.password = 'La contraseña es requerida';
+    else if (password.length < 6) e.password = 'Debe tener al menos 6 caracteres';
+    if (confirmPassword !== password) e.confirmPassword = 'Las contraseñas no coinciden';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
 
   const onRegister = async () => {
-    if (!username.trim() || !password.trim()) {
-      return;
-    }
-    if (password.length < 6) {
-      return;
-    }
-    if (password !== confirmPassword) {
-      return;
-    }
+    if (!validate()) return;
     try {
       setLoading(true);
-      await register({ username, password });
-      navigation?.goBack();
+      setErrors({});
+      await register({ fullName: fullName.trim(), email: email.trim(), password });
+      // Si tu AuthContext hace auto-login, ya estás autenticado aquí:
+      navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
     } catch (e: any) {
-      // manejar error
+      setErrors((prev) => ({ ...prev, general: e?.message || 'No se pudo registrar' }));
     } finally {
       setLoading(false);
     }
@@ -51,16 +60,32 @@ export default function RegisterScreen({ navigation }: any) {
           <Card style={styles.formCard} mode="elevated">
             <Card.Content>
               <TextInput
-                label="Usuario"
-                placeholder="Ingresa tu usuario"
-                value={username}
-                onChangeText={setUsername}
-                autoCapitalize="none"
+                label="Nombre completo"
+                placeholder="Ej. Juan Pérez"
+                value={fullName}
+                onChangeText={setFullName}
                 mode="outlined"
                 left={<TextInput.Icon icon="account" />}
                 style={styles.input}
+                error={!!errors.fullName}
                 editable={!loading}
               />
+              {errors.fullName ? <Text style={styles.error}>{errors.fullName}</Text> : null}
+
+              <TextInput
+                label="Email"
+                placeholder="tucorreo@dominio.com"
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                mode="outlined"
+                left={<TextInput.Icon icon="email" />}
+                style={styles.input}
+                error={!!errors.email}
+                editable={!loading}
+              />
+              {errors.email ? <Text style={styles.error}>{errors.email}</Text> : null}
 
               <TextInput
                 label="Contraseña"
@@ -71,11 +96,13 @@ export default function RegisterScreen({ navigation }: any) {
                 mode="outlined"
                 left={<TextInput.Icon icon="lock" />}
                 style={styles.input}
+                error={!!errors.password}
                 editable={!loading}
               />
+              {errors.password ? <Text style={styles.error}>{errors.password}</Text> : null}
 
               <TextInput
-                label="Confirmar Contraseña"
+                label="Confirmar contraseña"
                 placeholder="Repite tu contraseña"
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
@@ -83,8 +110,12 @@ export default function RegisterScreen({ navigation }: any) {
                 mode="outlined"
                 left={<TextInput.Icon icon="lock-check" />}
                 style={styles.input}
+                error={!!errors.confirmPassword}
                 editable={!loading}
               />
+              {errors.confirmPassword ? <Text style={styles.error}>{errors.confirmPassword}</Text> : null}
+
+              {errors.general ? <Text style={[styles.error, { marginTop: 6 }]}>{errors.general}</Text> : null}
 
               <Button
                 mode="contained"
@@ -120,4 +151,5 @@ const styles = StyleSheet.create({
   formCard: { borderRadius: 16, padding: 12, marginTop: 8 },
   input: { marginBottom: 12 },
   footer: { marginTop: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
+  error: { color: '#B00020', fontSize: 12 },
 });

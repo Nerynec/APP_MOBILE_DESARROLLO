@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { SafeAreaView, View, FlatList, StyleSheet, Animated } from 'react-native';
 import { Text, Card, Button, Divider, Surface, IconButton, useTheme } from 'react-native-paper';
+import { createOrGetCart, setItem, checkout as apiCheckout } from '../services/sales.api';
+import { Alert } from 'react-native';
 import { useCart } from '../contexts/CartContext';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -15,17 +17,42 @@ export default function CheckoutScreen({ navigation }: any) {
     Animated.timing(anim, { toValue: 1, duration: 420, useNativeDriver: true }).start();
   }, []);
 
-  const onConfirm = () => {
-    if (items.length === 0) {
-      return;
-    }
+const onConfirm = async () => {
+  if (items.length === 0) return;
+
+  try {
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      clear();
-      navigation?.navigate('Success' as any); // si no existe, usa goBack o modal
-    }, 1400);
-  };
+
+    // 1) Crea u obtiene el carrito del usuario (puedes ajustar el taxRate si tu UI lo permite)
+    await createOrGetCart({ taxRate: 12 });
+
+    // 2) Sincroniza los ítems locales con el carrito del backend
+    //    (secuencial para evitar condiciones de carrera; si prefieres, puedes Promise.all)
+    for (const i of items) {
+      await setItem({
+        productId: Number(i.product.id),   // tu UI usa string; el backend espera number
+        qty: i.quantity,
+      });
+    }
+
+    // 3) Checkout (puedes permitir elegir el método de pago; aquí fijo 'CASH')
+    const receipt = await apiCheckout({ paymentMethodCode: 'CASH' });
+
+    // 4) Limpia carrito local y navega
+    clear();
+    // Pasa el recibo a la pantalla de éxito si quieres mostrar folio/total
+    navigation?.navigate('Success', { receipt });
+  } catch (e: any) {
+    const msg =
+      e?.response?.data?.message ||
+      e?.response?.data?.error ||
+      e?.message ||
+      'No se pudo procesar la compra';
+    Alert.alert('Error', msg);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const renderItem = ({ item }: any) => (
     <Card style={styles.itemCard} mode="elevated">

@@ -1,4 +1,6 @@
 /.expo
+/.expo
+*.pack
+node_modules
+node_modules
 /node_modules
-/node_modules/.cache
-/node_modules/.cache/web

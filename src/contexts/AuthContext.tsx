@@ -1,54 +1,107 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+// src/contexts/AuthContext.tsx
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+import * as SecureStore from "expo-secure-store";
+import { tokenStorage } from "../utils/storage";
+import { loginApi, AuthUser, registerApi } from "../services/auth.api";
 
-type User = { username: string } | null;
+type AuthStatus = "idle" | "checking" | "authenticated" | "unauthenticated";
+
+type LoginInput = { email: string; password: string };
+type RegisterInput = { fullName: string; email: string; password: string };
+
 type AuthContextType = {
-  user: User;
-  login: (creds: {username: string, password: string}) => Promise<void>;
-  register: (creds: {username: string, password: string}) => Promise<void>;
-  logout: () => void;
+  user: AuthUser | null;
+  status: AuthStatus;
+  login: (i: { email: string; password: string }) => Promise<void>;
+  logout: () => Promise<void>;
+  register: (i: RegisterInput) => Promise<void>; // 👈 nuevo
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-export const useAuth = () => {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
-  return ctx;
-};
 
-const STORAGE_KEY = '@tornillofeliz_user';
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [status, setStatus] = useState<AuthStatus>("checking");
 
-export const AuthProvider: React.FC = ({ children }) => {
-  const [user, setUser] = useState<User>(null);
-
+  // Cargar sesión al inicio
   useEffect(() => {
     (async () => {
       try {
-        const raw = await AsyncStorage.getItem(STORAGE_KEY);
-        if (raw) setUser(JSON.parse(raw));
-      } catch (e) {
-        console.log('Auth load error', e);
+        const token = await SecureStore.getItemAsync("token");
+        if (!token) {
+          setStatus("unauthenticated");
+          return;
+        }
+
+        setStatus("authenticated");
+      } catch {
+        await SecureStore.deleteItemAsync("token");
+        setUser(null);
+        setStatus("unauthenticated");
       }
     })();
   }, []);
 
-  const login = async ({ username, password }: {username: string, password: string}) => {
-    const raw = await AsyncStorage.getItem(STORAGE_KEY);
-    if (!raw) throw new Error('Usuario no encontrado. Regístrate');
-    const stored = JSON.parse(raw);
-    if (stored.username === username && stored.password === password) {
-      setUser({ username });
-    } else {
-      throw new Error('Credenciales inválidas');
-    }
-  };
+  const login = useCallback(
+    async ({ email, password }: { email: string; password: string }) => {
+      const { token, user } = await loginApi({ email, password });
+      await tokenStorage.set(token);
+      setUser(user);
+      setStatus("authenticated");
+    },
+    []
+  );
 
-  const register = async ({ username, password }: {username: string, password: string}) => {
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ username, password }));
-    setUser({ username });
-  };
+  const logout = useCallback(async () => {
+    await SecureStore.deleteItemAsync("token");
+    setUser(null);
+    setStatus("unauthenticated");
+  }, []);
 
-  const logout = () => setUser(null);
+  const register = useCallback(
+    async ({ fullName, email, password }: RegisterInput) => {
+      try {
+        // 1) crear usuario
+        await registerApi({ fullName, email, password });
 
-  return <AuthContext.Provider value={{ user, login, register, logout }}>{children}</AuthContext.Provider>;
+        // 2) auto-login
+        const { token, user } = await loginApi({ email, password });
+        await tokenStorage.set(token);
+        setUser(user);
+        setStatus("authenticated");
+      } catch (e: any) {
+        const status = e?.response?.status;
+        const serverMsg =
+          e?.response?.data?.message || e?.response?.data?.error;
+
+        let msg = "No se pudo registrar.";
+        if (!e?.response) msg = "No se pudo conectar con la API.";
+        else if (status === 400) msg = serverMsg || "Datos inválidos.";
+        else msg = serverMsg || `Error del servidor (${status}).`;
+
+        throw new Error(msg);
+      }
+    },
+    []
+  );
+
+  return (
+    <AuthContext.Provider value={{ user, status, login, logout, register }}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
+
+export function useAuth() {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth debe usarse dentro de <AuthProvider>");
+  return ctx;
+}
