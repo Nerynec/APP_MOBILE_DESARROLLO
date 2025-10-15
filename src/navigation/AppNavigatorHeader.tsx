@@ -72,6 +72,16 @@ export default function AppNavigatorHeader({ navigation, cart }: any) {
               <Ionicons name="bar-chart-outline" size={20} color="#2980b9" />
               <Text style={styles.menuText}>Reportería</Text>
             </TouchableOpacity>
+
+            <TouchableOpacity onPress={() => navigateTo('Usuarios')} style={styles.menuItem}>
+              <Ionicons name="bar-chart-outline" size={20} color="#2980b9" />
+              <Text style={styles.menuText}>Usuarios</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={() => navigateTo('Administrar')} style={styles.menuItem}>
+              <Ionicons name="bar-chart-outline" size={20} color="#2980b9" />
+              <Text style={styles.menuText}>Administrar Productos</Text>
+            </TouchableOpacity>
           </View>
         </TouchableOpacity>
       </Modal>
