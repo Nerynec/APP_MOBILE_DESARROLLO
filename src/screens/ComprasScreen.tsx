@@ -1,580 +1,353 @@
-import React, { useState } from 'react';
+// src/screens/PurchaseScreen.tsx
+import React from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-  Alert,
-  SafeAreaView,
+  SafeAreaView, ScrollView, View, Text, TextInput, Pressable,
+  StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator, Alert
 } from 'react-native';
-import { usePurchase, PurchaseItem } from '../contexts/PurchaseContext';
-import { useInventory } from '../contexts/InventoryContext';
+import { createPurchase, receivePurchase, getStock, type StockItem } from '../services/purchases';
+import PurchaseItemRow from '../components/PurchaseItemRow';
 
-export default function ComprasScreen({ navigation }: any) {
-  const {
-    currentPurchase,
-    setCurrentPurchase,
-    addItemToCurrentPurchase,
-    removeItemFromCurrentPurchase,
-    updateItemInCurrentPurchase,
-    savePurchase,
-    getCurrentPurchaseTotal,
-  } = usePurchase();
+type Row = { productId: number; qty: number; unitCost: number };
+type MsgType = 'success' | 'error';
 
-  const { products } = useInventory();
+type State = {
+  supplierId: string;        // como string para TextInput
+  invoiceNumber: string;
+  purchaseDate: string;      // 'YYYY-MM-DD'
+  items: Row[];
+  products: StockItem[];
+  createdId: number | null;
 
-  const [selectedProduct, setSelectedProduct] = useState('');
-  const [showProductDropdown, setShowProductDropdown] = useState(false);
+  msg: string;
+  msgType: MsgType;
 
-  const handleAddProduct = () => {
-    if (!selectedProduct) {
-      Alert.alert('Error', 'Selecciona un producto');
-      return;
-    }
+  loadingStock: boolean;
+  submitting: boolean;
+  receiving: boolean;
 
-    const product = products.find((p) => p.id.toString() === selectedProduct);
-    if (!product) return;
+  userId?: number;           // opcional, para receive
+};
 
-    const newItem: PurchaseItem = {
-      productId: product.id.toString(),
-      productName: product.nombre,
-      quantity: 10,
-      unitCost: 25,
-      subtotal: 250,
-    };
-
-    addItemToCurrentPurchase(newItem);
-    setSelectedProduct('');
-    setShowProductDropdown(false);
-  };
-
-  const handleSavePurchase = () => {
-    if (!currentPurchase.invoiceNumber) {
-      Alert.alert('Error', 'El número de factura es requerido');
-      return;
-    }
-
-    if (currentPurchase.items.length === 0) {
-      Alert.alert('Error', 'Agrega al menos un producto');
-      return;
-    }
-
-    try {
-      savePurchase();
-      Alert.alert('Éxito', 'Compra guardada correctamente', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
-    } catch (error: any) {
-      Alert.alert('Error', error.message);
-    }
-  };
-
-  const handleReceivePurchase = () => {
-    Alert.alert(
-      'Recibir Compra',
-      '¿Deseas marcar esta compra como recibida y actualizar el inventario?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Confirmar',
-          onPress: () => {
-            handleSavePurchase();
-          },
-        },
-      ]
-    );
-  };
-
-  return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <Text style={styles.headerIcon}>🛒</Text>
-            <View>
-              <Text style={styles.title}>Gestión de Compras</Text>
-              <Text style={styles.subtitle}>
-                Registra y administra las compras a proveedores
-              </Text>
-            </View>
-          </View>
-          <View style={styles.headerRight}>
-            <View style={styles.statBox}>
-              <Text style={styles.statLabel}>Ítems totales</Text>
-              <Text style={styles.statValue}>{currentPurchase.items.length}</Text>
-            </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statLabel}>Costo total</Text>
-              <Text style={styles.statValue}>
-                Q{getCurrentPurchaseTotal().toFixed(2)}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Purchase Information */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionIcon}>📋</Text>
-            <Text style={styles.sectionTitle}>Información de la Compra</Text>
-          </View>
-
-          <View style={styles.formGrid}>
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>
-                📁 Proveedor ID <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={styles.input}
-                value={currentPurchase.providerId}
-                onChangeText={(text) =>
-                  setCurrentPurchase({ ...currentPurchase, providerId: text })
-                }
-                placeholder="1"
-              />
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>
-                📄 Número de Factura <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={styles.input}
-                value={currentPurchase.invoiceNumber}
-                onChangeText={(text) =>
-                  setCurrentPurchase({ ...currentPurchase, invoiceNumber: text })
-                }
-                placeholder="Ej: FAC-001"
-              />
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>
-                📅 Fecha de Compra <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={styles.input}
-                value={currentPurchase.purchaseDate}
-                onChangeText={(text) =>
-                  setCurrentPurchase({ ...currentPurchase, purchaseDate: text })
-                }
-                placeholder="15/10/2025"
-              />
-            </View>
-          </View>
-        </View>
-
-        {/* Products Section */}
-        <View style={[styles.section, styles.productsSection]}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionIcon}>📦</Text>
-            <Text style={styles.sectionTitle}>Productos de la Compra</Text>
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={() => setShowProductDropdown(!showProductDropdown)}
-            >
-              <Text style={styles.addButtonText}>+ Agregar Producto</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Product Dropdown */}
-          {showProductDropdown && (
-            <View style={styles.dropdownContainer}>
-              <Text style={styles.dropdownLabel}>Seleccionar Producto:</Text>
-              <ScrollView style={styles.dropdown} nestedScrollEnabled>
-                {products.map((product) => (
-                  <TouchableOpacity
-                    key={product.id}
-                    style={[
-                      styles.dropdownItem,
-                      selectedProduct === product.id.toString() &&
-                        styles.dropdownItemSelected,
-                    ]}
-                    onPress={() => setSelectedProduct(product.id.toString())}
-                  >
-                    <Text style={styles.dropdownItemText}>
-                      {product.nombre} (Stock: {product.cantidad})
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-              <TouchableOpacity style={styles.confirmButton} onPress={handleAddProduct}>
-                <Text style={styles.confirmButtonText}>Confirmar</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* Table Header */}
-          <View style={styles.table}>
-            <View style={styles.tableHeader}>
-              <Text style={[styles.tableHeaderCell, styles.productCol]}>PRODUCTO</Text>
-              <Text style={[styles.tableHeaderCell, styles.quantityCol]}>CANTIDAD</Text>
-              <Text style={[styles.tableHeaderCell, styles.costCol]}>
-                COSTO UNITARIO (Q)
-              </Text>
-              <Text style={[styles.tableHeaderCell, styles.subtotalCol]}>
-                SUBTOTAL (Q)
-              </Text>
-              <Text style={[styles.tableHeaderCell, styles.actionsCol]}>ACCIONES</Text>
-            </View>
-
-            {/* Table Rows */}
-            {currentPurchase.items.map((item, index) => (
-              <View key={index} style={styles.tableRow}>
-                <View style={[styles.tableCell, styles.productCol]}>
-                  <Text style={styles.productName}>{item.productName}</Text>
-                  <Text style={styles.stockInfo}>(Stock: 38)</Text>
-                </View>
-
-                <View style={[styles.tableCell, styles.quantityCol]}>
-                  <TextInput
-                    style={styles.quantityInput}
-                    value={item.quantity.toString()}
-                    keyboardType="numeric"
-                    onChangeText={(text) =>
-                      updateItemInCurrentPurchase(index, {
-                        quantity: parseInt(text) || 0,
-                      })
-                    }
-                  />
-                </View>
-
-                <View style={[styles.tableCell, styles.costCol]}>
-                  <TextInput
-                    style={styles.costInput}
-                    value={item.unitCost.toString()}
-                    keyboardType="decimal-pad"
-                    onChangeText={(text) =>
-                      updateItemInCurrentPurchase(index, {
-                        unitCost: parseFloat(text) || 0,
-                      })
-                    }
-                  />
-                </View>
-
-                <View style={[styles.tableCell, styles.subtotalCol]}>
-                  <Text style={styles.subtotalText}>Q{item.subtotal.toFixed(2)}</Text>
-                </View>
-
-                <View style={[styles.tableCell, styles.actionsCol]}>
-                  <TouchableOpacity
-                    style={styles.deleteButton}
-                    onPress={() => removeItemFromCurrentPurchase(index)}
-                  >
-                    <Text style={styles.deleteIcon}>🗑️</Text>
-                    <Text style={styles.deleteText}>Eliminar</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))}
-          </View>
-
-          {/* Total */}
-          <View style={styles.totalContainer}>
-            <Text style={styles.totalLabel}>TOTAL:</Text>
-            <Text style={styles.totalValue}>
-              Q{getCurrentPurchaseTotal().toFixed(2)}
-            </Text>
-          </View>
-        </View>
-
-        {/* Action Buttons */}
-        <View style={styles.actionButtons}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.saveButton]}
-            onPress={handleSavePurchase}
-          >
-            <Text style={styles.actionButtonText}>💾 Guardar Compra</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.receiveButton]}
-            onPress={handleReceivePurchase}
-          >
-            <Text style={styles.actionButtonText}>✅ Recibir Compra</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
-  );
+function todayISODate() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#E8F5E9',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 15,
-  },
-  headerIcon: {
-    fontSize: 32,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1976D2',
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 2,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    gap: 15,
-  },
-  statBox: {
-    alignItems: 'center',
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#666',
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1976D2',
-  },
-  section: {
-    backgroundColor: '#FFFFFF',
-    margin: 20,
-    padding: 20,
-    borderRadius: 12,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  productsSection: {
-    background: 'linear-gradient(135deg, #0D9488 0%, #2563EB 100%)',
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  sectionIcon: {
-    fontSize: 24,
-    marginRight: 10,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    flex: 1,
-  },
-  addButton: {
-    backgroundColor: '#1976D2',
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  addButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  formGrid: {
-    gap: 15,
-  },
-  formGroup: {
-    marginBottom: 10,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
-    color: '#333',
-  },
-  required: {
-    color: '#e11d48',
-  },
-  input: {
-    backgroundColor: '#F5F7FA',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 14,
-  },
-  dropdownContainer: {
-    backgroundColor: '#F5F7FA',
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 15,
-  },
-  dropdownLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 10,
-  },
-  dropdown: {
-    maxHeight: 200,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  dropdownItem: {
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  dropdownItemSelected: {
-    backgroundColor: '#E3F2FD',
-  },
-  dropdownItemText: {
-    fontSize: 14,
-  },
-  confirmButton: {
-    backgroundColor: '#4CAF50',
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  confirmButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  table: {
-    marginTop: 15,
-  },
-  tableHeader: {
-    flexDirection: 'row',
-    backgroundColor: '#F5F7FA',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 10,
-  },
-  tableHeaderCell: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#666',
-  },
-  tableRow: {
-    flexDirection: 'row',
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-    alignItems: 'center',
-  },
-  tableCell: {
-    justifyContent: 'center',
-  },
-  productCol: {
-    flex: 2,
-  },
-  quantityCol: {
-    flex: 1,
-  },
-  costCol: {
-    flex: 1,
-  },
-  subtotalCol: {
-    flex: 1,
-  },
-  actionsCol: {
-    flex: 1,
-  },
-  productName: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  stockInfo: {
-    fontSize: 12,
-    color: '#666',
-  },
-  quantityInput: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 4,
-    padding: 8,
-    textAlign: 'center',
-  },
-  costInput: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 4,
-    padding: 8,
-    textAlign: 'center',
-  },
-  subtotalText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  deleteButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFEBEE',
-    padding: 8,
-    borderRadius: 6,
-  },
-  deleteIcon: {
-    fontSize: 16,
-    marginRight: 4,
-  },
-  deleteText: {
-    fontSize: 12,
-    color: '#e11d48',
-    fontWeight: '600',
-  },
-  totalContainer: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    marginTop: 20,
-    paddingTop: 20,
-    borderTopWidth: 2,
-    borderTopColor: '#E0E0E0',
-  },
-  totalLabel: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginRight: 20,
-  },
-  totalValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1976D2',
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: 15,
-    padding: 20,
-  },
-  actionButton: {
-    flex: 1,
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  saveButton: {
-    backgroundColor: '#0D9488',
-  },
-  receiveButton: {
-    backgroundColor: '#D946EF',
-  },
-  actionButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+export default class PurchaseScreen extends React.Component<any, State> {
+  constructor(props: any) {
+    super(props);
+    this.state = {
+      supplierId: '1',
+      invoiceNumber: '',
+      purchaseDate: todayISODate(),
+      items: [{ productId: 0, qty: 1, unitCost: 0 }],
+      products: [],
+      createdId: null,
+      msg: '',
+      msgType: 'success',
+      loadingStock: false,
+      submitting: false,
+      receiving: false,
+      userId: Number(this.props.route?.params?.userId) || 1, // si lo pasas desde navigator
+    };
+  }
+
+  async componentDidMount() {
+    this.setState({ loadingStock: true });
+    try {
+      const products = await getStock();
+      this.setState({ products });
+    } catch {
+      Alert.alert('Error', 'No se pudo cargar el stock');
+    } finally {
+      this.setState({ loadingStock: false });
+    }
+  }
+
+  addRow = () => this.setState((s) => ({ items: [...s.items, { productId: 0, qty: 1, unitCost: 0 }] }));
+  removeRow = (i: number) => this.setState((s) => ({ items: s.items.filter((_, idx) => idx !== i) }));
+  updateRow = (i: number, key: 'productId' | 'qty' | 'unitCost', val: number) =>
+    this.setState((s) => {
+      const arr = [...s.items];
+      (arr[i] as any)[key] = Number(val);
+      return { items: arr };
+    });
+
+  getProductName = (id: number) => {
+    const p = this.state.products.find(x => x.productId === id);
+    return p ? p.name : 'Producto no encontrado';
+  };
+
+  calcTotalItems(): number {
+    return this.state.items.reduce((sum, r) => sum + Number(r.qty || 0), 0);
+    }
+  calcTotalCost(): number {
+    return this.state.items.reduce((sum, r) => sum + Number(r.qty || 0) * Number(r.unitCost || 0), 0);
+  }
+
+  async submit() {
+    const supplierId = Number(this.state.supplierId || 0);
+    if (!supplierId) {
+      this.setState({ msg: '❌ Error: Proveedor inválido', msgType: 'error' });
+      return;
+    }
+    const cleanItems = this.state.items.filter(i => i.productId > 0 && i.qty > 0);
+    if (!cleanItems.length) {
+      this.setState({ msg: '❌ Error: agrega al menos un producto', msgType: 'error' });
+      return;
+    }
+
+    this.setState({ submitting: true, msg: '' });
+    try {
+      const payload = {
+        supplierId,
+        invoiceNumber: this.state.invoiceNumber || undefined,
+        purchaseDate: this.state.purchaseDate,
+        items: cleanItems,
+      };
+      const res = await createPurchase(payload);
+      this.setState({
+        createdId: res.purchaseId,
+        msg: `✅ Compra creada exitosamente #${res.purchaseId} (${res.status})`,
+        msgType: 'success',
+      });
+    } catch (e: any) {
+      this.setState({ msg: `❌ Error: ${e?.message || 'No se pudo guardar'}`, msgType: 'error' });
+    } finally {
+      this.setState({ submitting: false });
+    }
+  }
+
+  async doReceive() {
+    if (!this.state.createdId) return;
+    this.setState({ receiving: true, msg: '' });
+    try {
+      const res = await receivePurchase(this.state.createdId, this.state.userId);
+      this.setState({
+        msg: `✅ Compra recibida #${res.purchaseId} - Subtotal: Q${res.subtotal.toLocaleString()}, IVA: Q${res.tax.toLocaleString()}`,
+        msgType: 'success',
+      });
+    } catch (e: any) {
+      this.setState({ msg: `❌ Error: ${e?.message || 'No se pudo recibir'}`, msgType: 'error' });
+    } finally {
+      this.setState({ receiving: false });
+    }
+  }
+
+  render() {
+    const behavior = Platform.OS === 'ios' ? 'padding' : undefined;
+    const totalItems = this.calcTotalItems();
+    const totalCost = this.calcTotalCost();
+
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#f8fafc' }}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={behavior}>
+          <ScrollView contentContainerStyle={st.wrap} keyboardShouldPersistTaps="handled">
+            {/* Header + stats */}
+            <View style={st.header}>
+              <View>
+                <Text style={st.h1}>🛒 Gestión de Compras</Text>
+                <Text style={st.hSub}>Registra y administra las compras a proveedores</Text>
+              </View>
+              <View style={st.statsRow}>
+                <View style={st.statCard}>
+                  <Text style={st.statLabel}>Items totales</Text>
+                  <Text style={st.statValue}>{totalItems}</Text>
+                </View>
+                <View style={st.statCard}>
+                  <Text style={st.statLabel}>Costo total</Text>
+                  <Text style={[st.statValue, { color: '#16a34a' }]}>Q{totalCost.toFixed(2)}</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Mensaje */}
+            {!!this.state.msg && (
+              <View style={[
+                st.msg,
+                this.state.msgType === 'success' ? st.msgSuccess : st.msgError
+              ]}>
+                <Text style={this.state.msgType === 'success' ? st.msgTextSuccess : st.msgTextError}>
+                  {this.state.msg}
+                </Text>
+              </View>
+            )}
+
+            {/* Card: info compra */}
+            <View style={st.card}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Text style={{ fontSize: 22 }}>📋</Text>
+                <Text style={st.cardTitle}>Información de la compra</Text>
+              </View>
+
+              <View style={{ gap: 12 }}>
+                <View>
+                  <Text style={st.label}>🏢 Proveedor ID *</Text>
+                  <TextInput
+                    value={this.state.supplierId}
+                    onChangeText={(t) => this.setState({ supplierId: t })}
+                    keyboardType="number-pad"
+                    placeholder="Ingrese ID del proveedor"
+                    style={st.input}
+                  />
+                </View>
+
+                <View>
+                  <Text style={st.label}>📄 Número de factura *</Text>
+                  <TextInput
+                    value={this.state.invoiceNumber}
+                    onChangeText={(t) => this.setState({ invoiceNumber: t })}
+                    placeholder="Ej: FAC-001"
+                    style={st.input}
+                  />
+                </View>
+
+                <View>
+                  <Text style={st.label}>📅 Fecha de compra *</Text>
+                  <TextInput
+                    value={this.state.purchaseDate}
+                    onChangeText={(t) => this.setState({ purchaseDate: t })}
+                    placeholder="YYYY-MM-DD"
+                    autoCapitalize="none"
+                    style={st.input}
+                  />
+                  {/* Si quieres, integra @react-native-community/datetimepicker aquí */}
+                </View>
+              </View>
+            </View>
+
+            {/* Card: items */}
+            <View style={st.card}>
+              <View style={st.cardHeaderRow}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Text style={{ fontSize: 22, color: 'white' }}>📦</Text>
+                  <Text style={st.cardHeaderTitle}>Productos de la compra</Text>
+                </View>
+                <Pressable onPress={this.addRow} style={st.btnHeader}>
+                  <Text style={st.btnHeaderText}>➕ Agregar producto</Text>
+                </Pressable>
+              </View>
+
+              {this.state.loadingStock ? (
+                <View style={{ padding: 16, alignItems: 'center' }}>
+                  <ActivityIndicator />
+                </View>
+              ) : this.state.items.length === 0 ? (
+                <View style={{ padding: 20, alignItems: 'center', gap: 6 }}>
+                  <Text style={{ fontSize: 40 }}>📦</Text>
+                  <Text style={{ fontWeight: '700', color: '#111827' }}>No hay productos</Text>
+                  <Text style={{ color: '#64748b' }}>Agrega productos a tu compra</Text>
+                  <Pressable onPress={this.addRow} style={[st.btn, st.btnPrimary]}>
+                    <Text style={st.btnPrimaryText}>➕ Agregar Primer Producto</Text>
+                  </Pressable>
+                </View>
+              ) : (
+                <View style={{ gap: 12 }}>
+                  {this.state.items.map((r, i) => (
+                    <PurchaseItemRow
+                      key={i}
+                      index={i}
+                      row={r}
+                      products={this.state.products}
+                      getProductName={this.getProductName}
+                      onChange={this.updateRow}
+                      onRemove={this.removeRow}
+                    />
+                  ))}
+                </View>
+              )}
+
+              {/* Totales al pie */}
+              <View style={st.totals}>
+                <Text style={st.totalsLabel}>TOTAL:</Text>
+                <Text style={st.totalsValue}>Q{totalCost.toFixed(2)}</Text>
+              </View>
+            </View>
+
+            {/* Acciones */}
+            <View style={st.actions}>
+              <Pressable
+                onPress={() => this.submit()}
+                disabled={this.state.submitting}
+                style={[st.btn, st.btnPrimary, this.state.submitting && st.disabled]}
+              >
+                <Text style={st.btnPrimaryText}>{this.state.submitting ? 'Guardando…' : '💾 Guardar Compra'}</Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => this.doReceive()}
+                disabled={!this.state.createdId || this.state.receiving}
+                style={[
+                  st.btn, st.btnAlt,
+                  (!this.state.createdId || this.state.receiving) && st.disabled
+                ]}
+              >
+                <Text style={st.btnAltText}>{this.state.receiving ? 'Recibiendo…' : '✅ Recibir Compra'}</Text>
+              </Pressable>
+            </View>
+
+            {/* Info de compra creada */}
+            {!!this.state.createdId && (
+              <View style={st.infoCard}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <Text style={{ fontSize: 28 }}>✅</Text>
+                  <Text style={{ fontSize: 18, fontWeight: '800', color: '#111827' }}>Compra creada</Text>
+                </View>
+                <View style={{ gap: 6 }}>
+                  <Text><Text style={{ fontWeight: '700' }}>ID de Compra:</Text> #{this.state.createdId}</Text>
+                  <Text><Text style={{ fontWeight: '700' }}>Factura:</Text> {this.state.invoiceNumber || '—'}</Text>
+                  <Text><Text style={{ fontWeight: '700' }}>Fecha:</Text> {this.state.purchaseDate}</Text>
+                  <Text><Text style={{ fontWeight: '700' }}>Proveedor:</Text> #{this.state.supplierId}</Text>
+                </View>
+              </View>
+            )}
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    );
+  }
+}
+
+const st = StyleSheet.create({
+  wrap: { padding: 12, gap: 12 },
+  header: { gap: 12 },
+  h1: { fontSize: 22, fontWeight: '800', color: '#0f172a' },
+  hSub: { color: '#475569' },
+  statsRow: { flexDirection: 'row', gap: 8 },
+  statCard: { flex: 1, backgroundColor: 'white', borderRadius: 14, borderWidth: 1, borderColor: '#e5e7eb', padding: 14 },
+  statLabel: { color: '#4b5563', fontWeight: '600' },
+  statValue: { color: '#111827', fontSize: 20, fontWeight: '800' },
+
+  msg: { borderRadius: 12, borderWidth: 2, padding: 12 },
+  msgSuccess: { backgroundColor: '#f0fdf4', borderColor: '#bbf7d0' },
+  msgError: { backgroundColor: '#fef2f2', borderColor: '#fecaca' },
+  msgTextSuccess: { color: '#166534', fontWeight: '700' },
+  msgTextError: { color: '#991b1b', fontWeight: '700' },
+
+  card: { backgroundColor: 'white', borderRadius: 16, borderWidth: 1, borderColor: '#e5e7eb', padding: 12, gap: 12 },
+  cardTitle: { fontSize: 18, fontWeight: '800', color: '#111827' },
+  cardHeaderRow: { backgroundColor: '#16a34a', borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  cardHeaderTitle: { color: 'white', fontWeight: '800', fontSize: 16 },
+  btnHeader: { backgroundColor: 'white', paddingHorizontal: 12, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  btnHeaderText: { color: '#16a34a', fontWeight: '800' },
+
+  label: { color: '#374151', fontWeight: '700', marginBottom: 6 },
+  input: { height: 48, borderWidth: 2, borderColor: '#e5e7eb', borderRadius: 12, paddingHorizontal: 12, backgroundColor: 'white' },
+
+  totals: { marginTop: 12, borderTopWidth: 1, borderTopColor: '#e5e7eb', paddingTop: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  totalsLabel: { fontWeight: '800', color: '#334155' },
+  totalsValue: { fontWeight: '800', fontSize: 22, color: '#0ea5e9' },
+
+  actions: { flexDirection: 'column', gap: 8 },
+  btn: { height: 48, paddingHorizontal: 16, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  btnPrimary: { backgroundColor: '#2563eb' },
+  btnPrimaryText: { color: 'white', fontWeight: '800' },
+  btnAlt: { backgroundColor: '#7c3aed', borderColor: '#c4b5fd' },
+  btnAltText: { color: 'white', fontWeight: '800' },
+  disabled: { opacity: 0.6 },
+
+  infoCard: { backgroundColor: '#dcfce7', borderWidth: 2, borderColor: '#86efac', padding: 12, borderRadius: 12 },
 });

@@ -1,6 +1,7 @@
-/.expo
-/.expo
+.expo
 *.pack
 node_modules
+node_modules
+/node_modules
 node_modules
 /node_modules
