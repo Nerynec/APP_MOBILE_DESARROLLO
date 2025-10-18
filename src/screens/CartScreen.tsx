@@ -34,16 +34,16 @@ export default function CartScreen({ navigation }: any) {
     ]);
   };
 
-  const handleRemoveItem = (productId: string, productName: string) => {
+  const handleRemoveItem = (productId: string | number, productName: string) => {
     Alert.alert('Eliminar producto', `¿Deseas quitar "${productName}" del carrito?`, [
       { text: 'Cancelar', style: 'cancel' },
-      { text: 'Eliminar', style: 'destructive', onPress: () => remove(productId) },
+      { text: 'Eliminar', style: 'destructive', onPress: () => remove(String(productId)) },
     ]);
   };
 
-  const handleChangeQty = (productId: string, qty: number) => {
-    if (qty < 1) remove(productId);
-    else setQty(productId, qty);
+  const handleChangeQty = (productId: string | number, qty: number) => {
+    if (qty < 1) remove(String(productId));
+    else setQty(String(productId), qty);
   };
 
   const renderItem = ({ item }: any) => (
@@ -63,17 +63,19 @@ export default function CartScreen({ navigation }: any) {
               <IconButton
                 icon={() => <Ionicons name="remove-circle-outline" size={22} color={theme.colors.error} />}
                 size={24}
-                onPress={() => decreaseQty(item.product.id)}
+                onPress={() => decreaseQty(String(item.product.id))}
                 mode="contained"
                 containerColor="transparent"
+                accessibilityLabel="Disminuir cantidad"
               />
               <Text style={styles.qtyText}>{item.quantity}</Text>
               <IconButton
-                icon={() => <Ionicons name="add-circle-outline" size={22} color={theme.colors.success} />}
+                icon={() => <Ionicons name="add-circle-outline" size={22} color={(theme.colors as any).success ?? theme.colors.primary} />}
                 size={24}
-                onPress={() => increaseQty(item.product.id)}
+                onPress={() => increaseQty(String(item.product.id))}
                 mode="contained"
                 containerColor="transparent"
+                accessibilityLabel="Aumentar cantidad"
               />
             </View>
 
@@ -83,9 +85,10 @@ export default function CartScreen({ navigation }: any) {
               </Text>
               <IconButton
                 icon={() => <Ionicons name="trash-outline" size={20} color="#fff" />}
-                onPress={() => handleRemoveItem(item.product.id, item.product.name)}
-                style={{ backgroundColor: theme.colors.error }}
+                onPress={() => handleRemoveItem(String(item.product.id), item.product.name)}
+                style={{ backgroundColor: theme.colors.error, marginTop: 4 }}
                 size={20}
+                accessibilityLabel="Eliminar producto"
               />
             </View>
           </View>
@@ -109,6 +112,7 @@ export default function CartScreen({ navigation }: any) {
           icon={() => <Ionicons name="trash-outline" size={22} color={items.length ? theme.colors.error : '#bbb'} />}
           onPress={handleClearCart}
           disabled={!items.length}
+          accessibilityLabel="Vaciar carrito"
         />
       </Surface>
 
@@ -149,11 +153,12 @@ export default function CartScreen({ navigation }: any) {
           >
             <FlatList
               data={items}
-              keyExtractor={(i) => i.product.id}
+              keyExtractor={(i) => String(i.product.id)}   // 🔑 consistente con normalizeId
               renderItem={renderItem}
               contentContainerStyle={{ padding: 16, paddingBottom: 140 }}
               showsVerticalScrollIndicator={false}
               ItemSeparatorComponent={() => <Divider style={{ marginVertical: 6 }} />}
+              extraData={items}                            // 🔁 fuerza rerender si alguna memo quedara
             />
           </Animated.View>
 
@@ -172,7 +177,7 @@ export default function CartScreen({ navigation }: any) {
               mode="contained"
               onPress={() => navigation.navigate('Checkout')}
               style={styles.checkoutBtn}
-              buttonColor={theme.colors.success}
+              buttonColor={(theme.colors as any).success ?? theme.colors.primary}
               textColor="#fff"
               icon={() => <Ionicons name="arrow-forward" size={18} color="#fff" />}
             >
@@ -182,11 +187,9 @@ export default function CartScreen({ navigation }: any) {
             <FAB
               icon={() => <Ionicons name="trash-outline" size={18} color="#fff" />}
               style={styles.fab}
-              small
               onPress={handleClearCart}
               visible={items.length > 0}
               label="Vaciar"
-              extended={false}
               variant="tertiary"
             />
           </Surface>
@@ -211,9 +214,9 @@ const styles = StyleSheet.create({
   },
   title: { textAlign: 'center', flex: 1 },
   card: { borderRadius: 14, overflow: 'hidden' },
-  cardContent: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  image: { width: 92, height: 92, borderRadius: 12, backgroundColor: '#eee' },
-  info: { flex: 1, paddingLeft: 8 },
+  cardContent: { flexDirection: 'row', alignItems: 'center' /* evita gap por compatibilidad */ },
+  image: { width: 92, height: 92, borderRadius: 12, backgroundColor: '#eee', marginRight: 12 },
+  info: { flex: 1, paddingLeft: 4 },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 },
   qty: { flexDirection: 'row', alignItems: 'center' },
   qtyText: { fontWeight: '700', marginHorizontal: 8 },
@@ -227,17 +230,8 @@ const styles = StyleSheet.create({
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
   },
-  checkoutBtn: {
-    paddingHorizontal: 16,
-    borderRadius: 12,
-  },
-  fab: {
-    position: 'absolute',
-    right: 16,
-    bottom: 16,
-    backgroundColor: '#fb923c',
-  },
+  checkoutBtn: { paddingHorizontal: 16, borderRadius: 12, marginRight: 8 },
+  fab: { position: 'absolute', right: 16, bottom: 16, backgroundColor: '#fb923c' },
   empty: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
 });

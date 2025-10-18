@@ -5,6 +5,7 @@ import { createOrGetCart, setItem, checkout as apiCheckout } from '../services/s
 import { Alert } from 'react-native';
 import { useCart } from '../contexts/CartContext';
 import { Ionicons } from '@expo/vector-icons';
+import { placeOrderMobile, CheckoutPayload } from '../services/sales.api';
 
 export default function CheckoutScreen({ navigation }: any) {
   const { items, total, clear } = useCart();
@@ -23,24 +24,30 @@ const onConfirm = async () => {
   try {
     setLoading(true);
 
-    // 1) Crea u obtiene el carrito del usuario (puedes ajustar el taxRate si tu UI lo permite)
-    await createOrGetCart({ taxRate: 12 });
+    const subtotal = items.reduce(
+      (acc: number, i: any) => acc + Number(i.product.price ?? 0) * Number(i.quantity ?? 0),
+      0
+    );
 
-    // 2) Sincroniza los ítems locales con el carrito del backend
-    //    (secuencial para evitar condiciones de carrera; si prefieres, puedes Promise.all)
-    for (const i of items) {
-      await setItem({
-        productId: Number(i.product.id),   // tu UI usa string; el backend espera number
-        qty: i.quantity,
-      });
-    }
+    const payload: CheckoutPayload = {
+      items: items.map((i: any) => ({
+        productId: i.product.id,
+        quantity: Number(i.quantity),
+        unitPrice: Number(i.product.price ?? 0),
+      })),
+      summary: {
+        subtotal,
+        tax: 0,        // si calculas IVA en la app, ponlo aquí
+        shipping: 0,   // si tienes envío, ponlo aquí
+        total: subtotal, // se calcula para UI, pero el service lo quita antes del checkout
+      },
+      customer: { name: 'Consumidor Final', phone: '0000-0000' }, // reemplaza con tu formulario si ya lo tienes
+      delivery: { method: 'pickup' },  // o 'delivery' con address en customer
+      payment: { method: 'cash' },     // 'card' | 'transfer' (+ reference)
+    };
 
-    // 3) Checkout (puedes permitir elegir el método de pago; aquí fijo 'CASH')
-    const receipt = await apiCheckout({ paymentMethodCode: 'CASH' });
-
-    // 4) Limpia carrito local y navega
+    const receipt = await placeOrderMobile(payload);
     clear();
-    // Pasa el recibo a la pantalla de éxito si quieres mostrar folio/total
     navigation?.navigate('Success', { receipt });
   } catch (e: any) {
     const msg =
@@ -53,6 +60,7 @@ const onConfirm = async () => {
     setLoading(false);
   }
 };
+
 
   const renderItem = ({ item }: any) => (
     <Card style={styles.itemCard} mode="elevated">
