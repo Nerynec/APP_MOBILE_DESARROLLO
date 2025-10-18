@@ -103,14 +103,7 @@ export default function ProductsScreen({ navigation }: any) {
           <Text variant="headlineMedium" style={{ fontWeight: '800', color: theme.colors.primary }}>Nuestros Productos</Text>
         </View>
         <View style={styles.actions}>
-          <View>
-            <IconButton icon={() => <Ionicons name="cart" size={22} color="#fff" />} style={{ backgroundColor: theme.colors.primary }} onPress={() => navigation.navigate('Cart')} />
-            {cartItemsCount > 0 && <Badge size={18} style={{ position: 'absolute', top: 2, right: 2, backgroundColor: theme.colors.error, color: '#fff' }}>{cartItemsCount}</Badge>}
-          </View>
-          {cartItemsCount > 0 && (
-            <IconButton icon={() => <Ionicons name="trash-outline" size={22} color="#fff" />} style={{ backgroundColor: theme.colors.error }} onPress={handleClearCart} />
-          )}
-          <IconButton icon={() => <Ionicons name="log-out-outline" size={22} color={theme.colors.error} />} onPress={logout} style={styles.logoutBtn} mode="contained-tonal" />
+          
         </View>
       </Surface>
 
