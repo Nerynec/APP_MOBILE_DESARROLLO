@@ -1,22 +1,15 @@
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
+// src/contexts/AuthContext.tsx
+import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import * as SecureStore from "expo-secure-store";
 import { tokenStorage } from "../utils/storage";
 import { loginApi, AuthUser, registerApi } from "../services/auth.api";
 
 type AuthStatus = "idle" | "checking" | "authenticated" | "unauthenticated";
-
 type RegisterInput = { fullName: string; email: string; password: string };
 
 type AuthContextType = {
   user: AuthUser | null;
   status: AuthStatus;
-  // 👇 devolvemos el usuario para poder decidir navegación por rol
   login: (i: { email: string; password: string }) => Promise<AuthUser>;
   logout: () => Promise<void>;
   register: (i: RegisterInput) => Promise<void>;
@@ -28,7 +21,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<AuthUser | null>(null);
   const [status, setStatus] = useState<AuthStatus>("checking");
 
-  // Cargar sesión al inicio (simple: si hay token -> authenticated)
   useEffect(() => {
     (async () => {
       try {
@@ -37,7 +29,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setStatus("unauthenticated");
           return;
         }
-        // Opcional: podrías llamar /auth/me para obtener el user
+        // Si quieres, aquí podrías llamar /auth/me para cargar el usuario.
         setStatus("authenticated");
       } catch {
         await SecureStore.deleteItemAsync("token");
@@ -49,14 +41,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = useCallback(async ({ email, password }: { email: string; password: string }) => {
     const { token, user } = await loginApi({ email, password });
-    await tokenStorage.set(token);
+    await tokenStorage.set(token);            // guarda token
     setUser(user);
     setStatus("authenticated");
-    return user; // 👈 importante para el redirect por rol
+    return user; // útil para navegar por rol
   }, []);
 
   const logout = useCallback(async () => {
-    await SecureStore.deleteItemAsync("token");
+    // limpia TODO lo relacionado a sesión
+    try { await tokenStorage.set(""); } catch {}
+    try { await SecureStore.deleteItemAsync("token"); } catch {}
     setUser(null);
     setStatus("unauthenticated");
   }, []);

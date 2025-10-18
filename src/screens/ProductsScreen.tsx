@@ -7,6 +7,8 @@ import ProductCard from '../components/ProductCard';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import { http } from '../services/http';
+// ...
+
 
 // tip UI + mapper (puedes moverlo a models/product.ts)
 type UiProduct = { id: string; name: string; price: number; imageUrl: string | null; sku: string; brand?: string; category?: string };
@@ -38,6 +40,14 @@ export default function ProductsScreen({ navigation }: any) {
   const [refreshing, setRefreshing] = useState(false);
   const [hasNext, setHasNext] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+
+const onLogout = async () => {
+  await logout();
+  // manda al stack público (Login/Register)
+  navigation.reset({ index: 0, routes: [{ name: "Login" }] });
+};
+
 
   const fetchPage = async (pageToLoad: number, replace = false) => {
     const setLoad = pageToLoad === 1 && !refreshing ? setLoading : setLoadingMore;
@@ -103,8 +113,12 @@ export default function ProductsScreen({ navigation }: any) {
           <Text variant="headlineMedium" style={{ fontWeight: '800', color: theme.colors.primary }}>Nuestros Productos</Text>
         </View>
         <View style={styles.actions}>
-          
-        </View>
+<IconButton
+  icon={() => <Ionicons name="log-out-outline" size={22} color={theme.colors.error} />}
+  onPress={onLogout}
+  style={styles.logoutBtn}
+  mode="contained-tonal"
+/>       </View>
       </Surface>
 
       {/* buscador */}
