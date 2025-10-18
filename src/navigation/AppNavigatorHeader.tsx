@@ -83,6 +83,11 @@ export default function AppNavigatorHeader({ navigation, cart }: any) {
                 <Ionicons name="apps-outline" size={20} color="#2980b9" />
                 <Text style={styles.menuText}>Administrar Productos</Text>
               </TouchableOpacity>
+
+              <TouchableOpacity onPress={() => navigateTo('Inventory')} style={styles.menuItem}>
+                <Ionicons name="apps-outline" size={20} color="#2980b9" />
+                <Text style={styles.menuText}>Inventario</Text>
+              </TouchableOpacity>
             </View>
           </TouchableOpacity>
         </Modal>
