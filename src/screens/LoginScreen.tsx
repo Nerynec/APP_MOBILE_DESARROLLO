@@ -54,19 +54,27 @@ export default function LoginScreen({ navigation }: any) {
 
   // ... dentro de LoginScreen (tu mismo archivo)
   // LoginScreen.tsx
-const onLogin = async () => {
-  if (!validateForm()) return;
-  setIsLoading(true);
-  try {
-    await login({ email: username.trim(), password }); // 👈 usa email
-    navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
-  } catch (e: any) {
-    setErrors((prev) => ({ ...prev, password: e?.message || 'Error al iniciar sesión' }));
-  } finally {
-    setIsLoading(false);
-  }
-};
+  const onLogin = async () => {
+    if (!validateForm()) return;
+    setIsLoading(true);
+    try {
+      const loggedUser = await login({ email: username.trim(), password });
+      const isAdmin = !!loggedUser?.roles?.includes("ADMIN");
 
+      // 👇 redirige según rol
+      navigation.reset({
+        index: 0,
+        routes: [{ name: isAdmin ? "Dashboard" : "Products" }],
+      });
+    } catch (e: any) {
+      setErrors((prev) => ({
+        ...prev,
+        password: e?.message || "Error al iniciar sesión",
+      }));
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>

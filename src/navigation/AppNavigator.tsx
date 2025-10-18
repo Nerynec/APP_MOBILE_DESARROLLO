@@ -1,8 +1,5 @@
 import React from "react";
-import {
-  createStackNavigator,
-  TransitionPresets,
-} from "@react-navigation/stack";
+import { createStackNavigator, TransitionPresets } from "@react-navigation/stack";
 import { StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "../contexts/AuthContext";
@@ -27,6 +24,8 @@ const Stack = createStackNavigator();
 export default function AppNavigator() {
   const { user } = useAuth();
   const cart = useCart();
+  const isAdmin = !!user?.roles?.includes("ADMIN");
+  console.log(isAdmin);
 
   const commonScreenOptions = {
     headerBackground: () => (
@@ -38,11 +37,7 @@ export default function AppNavigator() {
       />
     ),
     headerTintColor: "#fff",
-    headerTitleStyle: {
-      fontWeight: "700",
-      fontSize: 20,
-      letterSpacing: 0.5,
-    },
+    headerTitleStyle: { fontWeight: "700", fontSize: 20, letterSpacing: 0.5 },
     headerShadowVisible: false,
     ...TransitionPresets.SlideFromRightIOS,
   };
@@ -51,14 +46,13 @@ export default function AppNavigator() {
     <Stack.Navigator screenOptions={commonScreenOptions}>
       {user ? (
         <>
+          {/* Comunes */}
           <Stack.Screen
             name="Products"
             component={ProductsScreen}
             options={({ navigation }) => ({
               title: "🛍️ Productos",
-              headerRight: () => (
-                <AppNavigatorHeader navigation={navigation} cart={cart} />
-              ),
+              headerRight: () => <AppNavigatorHeader navigation={navigation} cart={cart} />,
             })}
           />
           <Stack.Screen
@@ -66,72 +60,42 @@ export default function AppNavigator() {
             component={CartScreen}
             options={({ navigation }) => ({
               title: "🛒 Carrito",
-              headerRight: () => (
-                <AppNavigatorHeader navigation={navigation} cart={cart} />
-              ),
+              headerRight: () => <AppNavigatorHeader navigation={navigation} cart={cart} />,
             })}
           />
           <Stack.Screen
             name="Checkout"
             component={CheckoutScreen}
-            options={{
-              title: "💳 Finalizar Compra",
-              gestureEnabled: false,
-            }}
+            options={{ title: "💳 Finalizar Compra", gestureEnabled: false }}
           />
-          <Stack.Screen
-            name="Dashboard"
-            component={DashboardScreen}
-            options={{ title: "📊 Dashboard" }}
-          />
-          <Stack.Screen
-            name="Compras"
-            component={ComprasScreen}
-            options={{ title: "🧾 Compras" }}
-          />
-          <Stack.Screen
-            name="Reporteria"
-            component={ReporteriaScreen}
-            options={{ title: "📈 Reportería" }}
-          />
-          <Stack.Screen
-            name="Inventory"
-            component={InventoryScreen}
-            options={{ title: "📦 Inventario" }}
-          />
-          <Stack.Screen
-            name="Usuarios"
-            component={UsersScreen}
-            options={{ title: "📦 Usuarios" }}
-          />
-          <Stack.Screen
-            name="Administrar"
-            component={AdminProductScreen}
-            options={{ title: "📦 Administrar" }}
-          />
-          <Stack.Screen
-            name="ProductForm"
-            component={ProductFormScreen}
-            options={({ route }) => ({
-              title: route?.params?.id
-                ? "✏️ Editar producto"
-                : "🆕 Nuevo producto"})}/>
+
+          {/* Solo ADMIN */}
+          {isAdmin && (
+            <>
+              <Stack.Screen name="Dashboard" component={DashboardScreen} options={{ title: "📊 Dashboard" }} />
+              <Stack.Screen name="Compras" component={ComprasScreen} options={{ title: "🧾 Compras" }} />
+              <Stack.Screen name="Reporteria" component={ReporteriaScreen} options={{ title: "📈 Reportería" }} />
+              <Stack.Screen name="Inventory" component={InventoryScreen} options={{ title: "📦 Inventario" }} />
+              <Stack.Screen name="Usuarios" component={UsersScreen} options={{ title: "👥 Usuarios" }} />
+              <Stack.Screen name="Administrar" component={AdminProductScreen} options={{ title: "🧰 Administrar" }} />
+              <Stack.Screen
+                name="ProductForm"
+                component={ProductFormScreen}
+                options={({ route }: any) => ({
+                  title: route?.params?.id ? "✏️ Editar producto" : "🆕 Nuevo producto",
+                })}
+              />
+            </>
+          )}
         </>
       ) : (
         <>
           <Stack.Screen
             name="Login"
             component={LoginScreen}
-            options={{
-              headerShown: false,
-              animationTypeForReplace: user ? "pop" : "push",
-            }}
+            options={{ headerShown: false, animationTypeForReplace: user ? "pop" : "push" }}
           />
-          <Stack.Screen
-            name="Register"
-            component={RegisterScreen}
-            options={{ headerShown: false }}
-          />
+          <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
         </>
       )}
     </Stack.Navigator>
