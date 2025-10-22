@@ -6,12 +6,7 @@ import ProductCard from '../components/ProductCard';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import { http } from '../services/http';
-<<<<<<< HEAD
 import type { Product } from '../data/products';
-=======
-// ...
-
->>>>>>> a5fae1bd065d7b86b76e039055a4283ebfab0280
 
 // ---- Tipos API/UI ----
 type UiProduct = {
@@ -65,14 +60,6 @@ export default function ProductsScreen({ navigation }: any) {
   const [hasNext, setHasNext] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-
-const onLogout = async () => {
-  await logout();
-  // manda al stack público (Login/Register)
-  navigation.reset({ index: 0, routes: [{ name: "Login" }] });
-};
-
-
   const fetchPage = async (pageToLoad: number, replace = false) => {
     const setLoad = pageToLoad === 1 && !refreshing ? setLoading : setLoadingMore;
     setLoad(true);
@@ -124,7 +111,6 @@ const onLogout = async () => {
           <Text variant="headlineMedium" style={{ fontWeight: '800', color: theme.colors.primary }}>Nuestros Productos</Text>
         </View>
         <View style={styles.actions}>
-<<<<<<< HEAD
           <View>
             <IconButton icon={() => <Ionicons name="cart" size={22} color="#fff" />} style={{ backgroundColor: theme.colors.primary }} onPress={() => navigation.navigate('Cart')} />
             {cartItemsCount > 0 && <Badge size={18} style={{ position: 'absolute', top: 2, right: 2, backgroundColor: theme.colors.error, color: '#fff' }}>{cartItemsCount}</Badge>}
@@ -132,14 +118,6 @@ const onLogout = async () => {
           
           <IconButton icon={() => <Ionicons name="log-out-outline" size={22} color={theme.colors.error} />} onPress={logout} style={styles.logoutBtn} mode="contained-tonal" />
         </View>
-=======
-<IconButton
-  icon={() => <Ionicons name="log-out-outline" size={22} color={theme.colors.error} />}
-  onPress={onLogout}
-  style={styles.logoutBtn}
-  mode="contained-tonal"
-/>       </View>
->>>>>>> a5fae1bd065d7b86b76e039055a4283ebfab0280
       </Surface>
 
       <View style={{ paddingHorizontal: 12, marginBottom: 8 }}>

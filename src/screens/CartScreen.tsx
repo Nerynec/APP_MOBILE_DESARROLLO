@@ -57,7 +57,6 @@ export default function CartScreen({ navigation }: any) {
     setConfirmRemoveOpen(false);
   }, [pendingRemove, remove]);
 
-<<<<<<< HEAD
   // (Útil para debug) eliminar sin confirmar:
   // const quickRemove = (id: string) => { remove(id); setSnackMsg('Producto eliminado'); setSnackVisible(true); };
 
@@ -66,19 +65,6 @@ export default function CartScreen({ navigation }: any) {
     const qty   = Math.max(1, n(item?.quantity, 1));
     const line  = price * qty;
     const img   = item?.product?.image ? String(item.product.image) : placeholder;
-=======
-  const handleRemoveItem = (productId: string | number, productName: string) => {
-    Alert.alert('Eliminar producto', `¿Deseas quitar "${productName}" del carrito?`, [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Eliminar', style: 'destructive', onPress: () => remove(String(productId)) },
-    ]);
-  };
-
-  const handleChangeQty = (productId: string | number, qty: number) => {
-    if (qty < 1) remove(String(productId));
-    else setQty(String(productId), qty);
-  };
->>>>>>> a5fae1bd065d7b86b76e039055a4283ebfab0280
 
     return (
       <Card style={styles.card} elevation={2} mode="elevated">
@@ -92,7 +78,6 @@ export default function CartScreen({ navigation }: any) {
               Q {price.toFixed(2)} c/u
             </Text>
 
-<<<<<<< HEAD
             <View style={styles.row}>
               <View style={styles.qty}>
                 <IconButton
@@ -119,40 +104,6 @@ export default function CartScreen({ navigation }: any) {
                   size={20}
                 />
               </View>
-=======
-          <View style={styles.row}>
-            <View style={styles.qty}>
-              <IconButton
-                icon={() => <Ionicons name="remove-circle-outline" size={22} color={theme.colors.error} />}
-                size={24}
-                onPress={() => decreaseQty(String(item.product.id))}
-                mode="contained"
-                containerColor="transparent"
-                accessibilityLabel="Disminuir cantidad"
-              />
-              <Text style={styles.qtyText}>{item.quantity}</Text>
-              <IconButton
-                icon={() => <Ionicons name="add-circle-outline" size={22} color={(theme.colors as any).success ?? theme.colors.primary} />}
-                size={24}
-                onPress={() => increaseQty(String(item.product.id))}
-                mode="contained"
-                containerColor="transparent"
-                accessibilityLabel="Aumentar cantidad"
-              />
-            </View>
-
-            <View style={{ alignItems: 'flex-end' }}>
-              <Text variant="titleSmall" style={{ color: theme.colors.primary, fontWeight: '700' }}>
-                Q {(item.product.price * item.quantity).toFixed(2)}
-              </Text>
-              <IconButton
-                icon={() => <Ionicons name="trash-outline" size={20} color="#fff" />}
-                onPress={() => handleRemoveItem(String(item.product.id), item.product.name)}
-                style={{ backgroundColor: theme.colors.error, marginTop: 4 }}
-                size={20}
-                accessibilityLabel="Eliminar producto"
-              />
->>>>>>> a5fae1bd065d7b86b76e039055a4283ebfab0280
             </View>
           </View>
         </Card.Content>
@@ -173,7 +124,6 @@ export default function CartScreen({ navigation }: any) {
           icon={() => <Ionicons name="trash-outline" size={22} color={items.length ? theme.colors.error : '#bbb'} />}
           onPress={openConfirmClear}
           disabled={!items.length}
-          accessibilityLabel="Vaciar carrito"
         />
       </Surface>
 
@@ -203,16 +153,11 @@ export default function CartScreen({ navigation }: any) {
           }}>
             <FlatList
               data={items}
-<<<<<<< HEAD
               keyExtractor={(i) => String(i?.product?.id ?? Math.random())}
-=======
-              keyExtractor={(i) => String(i.product.id)}   // 🔑 consistente con normalizeId
->>>>>>> a5fae1bd065d7b86b76e039055a4283ebfab0280
               renderItem={renderItem}
               contentContainerStyle={{ padding: 16, paddingBottom: 160 }}
               showsVerticalScrollIndicator={false}
               ItemSeparatorComponent={() => <Divider style={{ marginVertical: 6 }} />}
-              extraData={items}                            // 🔁 fuerza rerender si alguna memo quedara
             />
           </Animated.View>
 
@@ -225,7 +170,6 @@ export default function CartScreen({ navigation }: any) {
               </Text>
             </View>
 
-<<<<<<< HEAD
             <View style={styles.actions}>
               <Button
                 mode="outlined"
@@ -249,27 +193,6 @@ export default function CartScreen({ navigation }: any) {
                 Proceder al pago
               </Button>
             </View>
-=======
-            <Button
-              mode="contained"
-              onPress={() => navigation.navigate('Checkout')}
-              style={styles.checkoutBtn}
-              buttonColor={(theme.colors as any).success ?? theme.colors.primary}
-              textColor="#fff"
-              icon={() => <Ionicons name="arrow-forward" size={18} color="#fff" />}
-            >
-              Proceder al pago
-            </Button>
-
-            <FAB
-              icon={() => <Ionicons name="trash-outline" size={18} color="#fff" />}
-              style={styles.fab}
-              onPress={handleClearCart}
-              visible={items.length > 0}
-              label="Vaciar"
-              variant="tertiary"
-            />
->>>>>>> a5fae1bd065d7b86b76e039055a4283ebfab0280
           </Surface>
         </>
       )}
@@ -322,15 +245,14 @@ const styles = StyleSheet.create({
   title: { textAlign: 'center', flex: 1 },
 
   card: { borderRadius: 14, overflow: 'hidden' },
-  cardContent: { flexDirection: 'row', alignItems: 'center' /* evita gap por compatibilidad */ },
-  image: { width: 92, height: 92, borderRadius: 12, backgroundColor: '#eee', marginRight: 12 },
-  info: { flex: 1, paddingLeft: 4 },
+  cardContent: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  image: { width: 92, height: 92, borderRadius: 12, backgroundColor: '#eee' },
+  info: { flex: 1, paddingLeft: 8 },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 },
   qty: { flexDirection: 'row', alignItems: 'center' },
   qtyText: { fontWeight: '700', marginHorizontal: 8 },
 
   footer: {
-<<<<<<< HEAD
     position: 'absolute', left: 12, right: 12, bottom: 18,
     backgroundColor: '#fff', borderRadius: 16, padding: 16,
   },
@@ -342,19 +264,4 @@ const styles = StyleSheet.create({
   checkoutBtn: { flexGrow: 2, borderRadius: 12, paddingHorizontal: 12 },
 
   empty: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 16 },
-=======
-    position: 'absolute',
-    left: 12,
-    right: 12,
-    bottom: 18,
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  checkoutBtn: { paddingHorizontal: 16, borderRadius: 12, marginRight: 8 },
-  fab: { position: 'absolute', right: 16, bottom: 16, backgroundColor: '#fb923c' },
-  empty: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
->>>>>>> a5fae1bd065d7b86b76e039055a4283ebfab0280
 });
