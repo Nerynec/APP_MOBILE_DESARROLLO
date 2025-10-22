@@ -54,7 +54,6 @@ export default class DashboardScreen extends React.Component<any, State> {
       const toISO = new Date(this.state.to).toISOString();
       const data = await getDashboard(fromISO, toISO);
 
-      // periodo anterior:
       const fromD = new Date(this.state.from);
       const toD = new Date(this.state.to);
       const duration = toD.getTime() - fromD.getTime();
@@ -108,36 +107,30 @@ export default class DashboardScreen extends React.Component<any, State> {
     const stamp = format(new Date(), 'yyyyMMdd_HHmm');
 
     try {
-      // resumen
       if (d.summary) {
         await saveAndShareText(`resumen_${stamp}.csv`, toCSV([{
           pedidos: d.summary.orders, ingresos: d.summary.revenue, ventas_brutas: d.summary.gross_sales,
           descuentos: d.summary.discounts, impuestos: d.summary.taxes, aov: d.summary.avg_order_value,
         }]));
       }
-      // daily
       if (d.daily?.length) {
         await saveAndShareText(`ingresos_diarios_${stamp}.csv`, toCSV(d.daily.map(x => ({ fecha: x.day, ingresos: x.revenue }))));
       }
-      // top
       if (d.topProducts?.length) {
         await saveAndShareText(`top_productos_${stamp}.csv`, toCSV(d.topProducts.map(t => ({
           id: t.product_id, producto: t.product_name, unidades: t.units, ingresos: t.revenue,
         }))));
       }
-      // por pago (usa payment_method_name / code)
       if (d.byPayment?.length) {
         await saveAndShareText(`por_pago_${stamp}.csv`, toCSV(d.byPayment.map(p => ({
           codigo: p.payment_method_code, metodo: p.payment_method_name, pedidos: p.orders, ingresos: p.revenue,
         }))));
       }
-      // por canal
       if (d.byChannel?.length) {
         await saveAndShareText(`por_canal_${stamp}.csv`, toCSV(d.byChannel.map(c => ({
           canal: c.channel, pedidos: c.orders, ingresos: c.revenue,
         }))));
       }
-      // por categoría (extra que tienes en web)
       if (d.byCategory?.length) {
         await saveAndShareText(`por_categoria_${stamp}.csv`, toCSV(d.byCategory.map(c => ({
           id: c.category_id ?? '', categoria: c.category_name ?? '', ingresos: c.revenue,
@@ -156,9 +149,14 @@ export default class DashboardScreen extends React.Component<any, State> {
         <Text style={st.kpiIcon}>{title}</Text>
         <Text style={st.kpiValue}>{value}</Text>
         {showTrend && (
-          <Text style={{ color: trendColor(p), fontWeight: '700' }}>
-            {p > 0 ? '▲' : p < 0 ? '▼' : '—'} {p.toFixed(1)}% <Text style={{ color: '#6b7280', fontWeight: '400' }}>vs anterior</Text>
-          </Text>
+          <View style={st.trendContainer}>
+            <View style={[st.trendBadge, { backgroundColor: p > 0 ? '#dcfce7' : p < 0 ? '#fee2e2' : '#f1f5f9' }]}>
+              <Text style={[st.trendText, { color: trendColor(p) }]}>
+                {p > 0 ? '▲' : p < 0 ? '▼' : '—'} {Math.abs(p).toFixed(1)}%
+              </Text>
+            </View>
+            <Text style={st.trendLabel}>vs anterior</Text>
+          </View>
         )}
       </View>
     );
@@ -169,18 +167,16 @@ export default class DashboardScreen extends React.Component<any, State> {
     const s = data?.summary, ps = prev?.summary;
 
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#f1f5f9' }}>
+      <SafeAreaView style={st.safeArea}>
         <ScrollView contentContainerStyle={st.wrap}>
-          {/* Header */}
           <View style={st.header}>
             <View>
               <Text style={st.h1}>Dashboard de Ventas</Text>
               <Text style={st.hSub}>
-                📊 Rango: {format(new Date(this.state.from), 'dd MMM yyyy')} → {format(new Date(this.state.to), 'dd MMM yyyy')}
+                Rango: {format(new Date(this.state.from), 'dd MMM yyyy')} → {format(new Date(this.state.to), 'dd MMM yyyy')}
               </Text>
             </View>
 
-            {/* Presets */}
             <View style={st.presetRow}>
               {(['today','7d','30d','mtd','ytd'] as PresetKey[]).map((p) => (
                 <Pressable key={p} style={st.chip} onPress={() => this.applyPreset(p)}>
@@ -191,7 +187,6 @@ export default class DashboardScreen extends React.Component<any, State> {
               ))}
             </View>
 
-            {/* Fechas y acciones */}
             <View style={st.dateRow}>
               <TextInput value={this.state.from} onChangeText={(t)=>this.setState({from:t})} placeholder="YYYY-MM-DDTHH:mm" style={st.dateInput}/>
               <TextInput value={this.state.to}   onChangeText={(t)=>this.setState({to:t})}   placeholder="YYYY-MM-DDTHH:mm" style={st.dateInput}/>
@@ -204,20 +199,18 @@ export default class DashboardScreen extends React.Component<any, State> {
             </View>
           </View>
 
-          {!!err && <View style={st.error}><Text style={{ color: '#b91c1c' }}>⚠️ {err}</Text></View>}
+          {!!err && <View style={st.error}><Text style={st.errorText}>⚠️ {err}</Text></View>}
 
-          {/* KPIs */}
           {s ? (
             <View style={st.kpiRow}>
               {this.renderKpi('💰 Ingresos', money(s.revenue), s.revenue, ps?.revenue)}
               {this.renderKpi('📦 Pedidos', num(s.orders), s.orders, ps?.orders)}
               {this.renderKpi('💳 AOV', money(s.avg_order_value), s.avg_order_value, ps?.avg_order_value)}
-              {this.renderKpi('🏷️ Descuentos', money(s.discounts), s.discounts /* tendencia opcional */)}
+              {this.renderKpi('🏷️ Descuentos', money(s.discounts), s.discounts)}
               {this.renderKpi('🧾 Impuestos', money(s.taxes), s.taxes)}
             </View>
           ) : (<View style={{ padding: 12 }}><ActivityIndicator /></View>)}
 
-          {/* Área: ingresos por día */}
           {(data?.daily?.length || 0) > 0 && (
             <View style={st.card}>
               <Text style={st.cardTitle}>📈 Ingresos por día</Text>
@@ -230,7 +223,6 @@ export default class DashboardScreen extends React.Component<any, State> {
             </View>
           )}
 
-          {/* Barras: top productos */}
           {(data?.topProducts?.length || 0) > 0 && (
             <View style={st.card}>
               <Text style={st.cardTitle}>🏆 Top productos por ingresos</Text>
@@ -246,7 +238,6 @@ export default class DashboardScreen extends React.Component<any, State> {
                   data={data!.topProducts.map((t, i) => ({ x: i + 1, y: t.revenue }))}/>
               </VictoryChart>
 
-              {/* Tabla compacta */}
               <View style={st.tableToolbar}>
                 <TextInput value={this.state.prodQuery} onChangeText={(t)=>this.setState({prodQuery:t})} placeholder="Buscar producto…" style={st.search}/>
                 <View style={{ flexDirection: 'row', gap: 6 }}>
@@ -266,7 +257,6 @@ export default class DashboardScreen extends React.Component<any, State> {
             </View>
           )}
 
-          {/* Donut: por método de pago */}
           {(data?.byPayment?.length || 0) > 0 && (
             <View style={st.card}>
               <Text style={st.cardTitle}>💳 Mezcla por método de pago</Text>
@@ -280,7 +270,6 @@ export default class DashboardScreen extends React.Component<any, State> {
             </View>
           )}
 
-          {/* Barras: por canal */}
           {(data?.byChannel?.length || 0) > 0 && (
             <View style={st.card}>
               <Text style={st.cardTitle}>📱 Ventas por canal</Text>
@@ -297,7 +286,6 @@ export default class DashboardScreen extends React.Component<any, State> {
             </View>
           )}
 
-          {/* Barras: por hora */}
           {(data?.byHour?.length || 0) > 0 && (
             <View style={st.card}>
               <Text style={st.cardTitle}>⏰ Actividad por hora</Text>
@@ -320,36 +308,241 @@ export default class DashboardScreen extends React.Component<any, State> {
 }
 
 const st = StyleSheet.create({
-  wrap: { padding: 12, gap: 12 },
-  header: { backgroundColor: 'white', borderRadius: 16, borderWidth: 1, borderColor: '#e5e7eb', padding: 12, gap: 12 },
-  h1: { fontSize: 22, fontWeight: '800', color: '#111827' },
-  hSub: { color: '#475569' },
-  presetRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { backgroundColor: '#eef2ff', borderColor: '#c7d2fe', borderWidth: 1, paddingVertical: 6, paddingHorizontal: 10, borderRadius: 999 },
-  chipText: { color: '#4338ca', fontWeight: '700' },
-  dateRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' },
-  dateInput: { height: 44, borderRadius: 12, borderWidth: 1, borderColor: '#cbd5e1', paddingHorizontal: 12, backgroundColor: 'white', flexGrow: 1, minWidth: 180 },
-  btn: { height: 44, paddingHorizontal: 12, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  btnPrimary: { backgroundColor: '#3b82f6' },
-  btnPrimaryText: { color: 'white', fontWeight: '800' },
-  btnGhost: { backgroundColor: 'white', borderWidth: 1, borderColor: '#cbd5e1' },
-  btnGhostText: { color: '#111827', fontWeight: '700' },
-  disabled: { opacity: 0.6 },
-  error: { padding: 12, borderRadius: 12, backgroundColor: '#fee2e2', borderWidth: 1, borderColor: '#fecaca' },
-
-  kpiRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  kpi: { flexGrow: 1, minWidth: 150, backgroundColor: 'white', borderRadius: 16, borderWidth: 1, borderColor: '#e5e7eb', padding: 12, gap: 4 },
-  kpiIcon: { fontSize: 22 },
-  kpiValue: { fontSize: 18, fontWeight: '800', color: '#0f172a' },
-
-  card: { backgroundColor: 'white', borderRadius: 16, borderWidth: 1, borderColor: '#e5e7eb', padding: 12 },
-  cardTitle: { fontSize: 16, fontWeight: '800', color: '#111827', marginBottom: 8 },
-
-  tableToolbar: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4, marginBottom: 8 },
-  search: { flexGrow: 1, height: 44, borderRadius: 12, borderWidth: 1, borderColor: '#cbd5e1', paddingHorizontal: 12, backgroundColor: 'white' },
-  pill: { paddingVertical: 6, paddingHorizontal: 10, borderRadius: 999, borderWidth: 1, borderColor: '#cbd5e1' },
-  pillText: { color: '#0f172a', fontSize: 13 },
-
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
-  cell: { color: '#0f172a' },
+  safeArea: { 
+    flex: 1, 
+    backgroundColor: '#f8fafc' 
+  },
+  wrap: { 
+    padding: 16, 
+    gap: 16 
+  },
+  header: { 
+    backgroundColor: 'white', 
+    borderRadius: 24, 
+    padding: 20,
+    gap: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  h1: { 
+    fontSize: 28, 
+    fontWeight: '900', 
+    color: '#0f172a', 
+    letterSpacing: -0.5 
+  },
+  hSub: { 
+    color: '#64748b', 
+    fontSize: 14, 
+    marginTop: 2 
+  },
+  presetRow: { 
+    flexDirection: 'row', 
+    flexWrap: 'wrap', 
+    gap: 10 
+  },
+  chip: { 
+    backgroundColor: '#f1f5f9', 
+    paddingVertical: 8, 
+    paddingHorizontal: 14, 
+    borderRadius: 999,
+    shadowColor: '#3b82f6',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  chipText: { 
+    color: '#1e40af', 
+    fontWeight: '700', 
+    fontSize: 13 
+  },
+  dateRow: { 
+    flexDirection: 'row', 
+    flexWrap: 'wrap', 
+    gap: 10, 
+    alignItems: 'center' 
+  },
+  dateInput: { 
+    height: 48, 
+    borderRadius: 16, 
+    borderWidth: 2, 
+    borderColor: '#e2e8f0', 
+    paddingHorizontal: 16, 
+    backgroundColor: '#f8fafc', 
+    flexGrow: 1, 
+    minWidth: 180,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0f172a',
+  },
+  btn: { 
+    height: 48, 
+    paddingHorizontal: 20, 
+    borderRadius: 16, 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  btnPrimary: { 
+    backgroundColor: '#3b82f6',
+  },
+  btnPrimaryText: { 
+    color: 'white', 
+    fontWeight: '800', 
+    fontSize: 14, 
+    letterSpacing: 0.3 
+  },
+  btnGhost: { 
+    backgroundColor: 'white', 
+    borderWidth: 2, 
+    borderColor: '#e2e8f0',
+  },
+  btnGhostText: { 
+    color: '#475569', 
+    fontWeight: '700', 
+    fontSize: 14 
+  },
+  disabled: { 
+    opacity: 0.5 
+  },
+  error: { 
+    padding: 16, 
+    borderRadius: 16, 
+    backgroundColor: '#fef2f2', 
+    borderWidth: 2, 
+    borderColor: '#fecaca',
+    shadowColor: '#ef4444',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  errorText: { 
+    color: '#dc2626', 
+    fontWeight: '700', 
+    fontSize: 14 
+  },
+  kpiRow: { 
+    flexDirection: 'row', 
+    flexWrap: 'wrap', 
+    gap: 12 
+  },
+  kpi: { 
+    flexGrow: 1, 
+    minWidth: 160, 
+    backgroundColor: 'white', 
+    borderRadius: 20, 
+    padding: 18,
+    gap: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
+    borderLeftWidth: 4,
+    borderLeftColor: '#3b82f6',
+  },
+  kpiIcon: { 
+    fontSize: 28, 
+    marginBottom: 4 
+  },
+  kpiValue: { 
+    fontSize: 24, 
+    fontWeight: '900', 
+    color: '#0f172a', 
+    letterSpacing: -0.5 
+  },
+  trendContainer: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    marginTop: 4 
+  },
+  trendBadge: { 
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  trendText: { 
+    fontWeight: '800', 
+    fontSize: 12 
+  },
+  trendLabel: { 
+    color: '#94a3b8', 
+    fontWeight: '600', 
+    fontSize: 11, 
+    marginLeft: 6 
+  },
+  card: { 
+    backgroundColor: 'white', 
+    borderRadius: 24, 
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  cardTitle: { 
+    fontSize: 18, 
+    fontWeight: '900', 
+    color: '#0f172a', 
+    marginBottom: 12,
+    letterSpacing: -0.3,
+  },
+  tableToolbar: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 10, 
+    marginTop: 8, 
+    marginBottom: 12,
+    paddingTop: 12,
+    borderTopWidth: 2,
+    borderTopColor: '#f1f5f9',
+  },
+  search: { 
+    flexGrow: 1, 
+    height: 46, 
+    borderRadius: 14, 
+    borderWidth: 2, 
+    borderColor: '#e2e8f0', 
+    paddingHorizontal: 14, 
+    backgroundColor: '#f8fafc',
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0f172a',
+  },
+  pill: { 
+    paddingVertical: 8, 
+    paddingHorizontal: 12, 
+    borderRadius: 999, 
+    borderWidth: 2, 
+    borderColor: '#e2e8f0',
+    backgroundColor: '#f8fafc',
+  },
+  pillText: { 
+    color: '#475569', 
+    fontSize: 13, 
+    fontWeight: '700' 
+  },
+  row: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 10, 
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1, 
+    borderBottomColor: '#f1f5f9',
+  },
+  cell: { 
+    color: '#1e293b', 
+    fontSize: 13, 
+    fontWeight: '600' 
+  },
 });

@@ -13,6 +13,7 @@ import {
   TextInput,
   TouchableWithoutFeedback,
   View,
+  Dimensions,
 } from 'react-native';
 import type { Product } from '../services/products';
 import { getProducts, deleteProduct } from '../services/products';
@@ -40,6 +41,9 @@ function money(n: any) {
 function firstLetter(name?: string) {
   return (name?.[0] || 'P').toUpperCase();
 }
+
+const { width } = Dimensions.get('window');
+const CARD_WIDTH = (width - 12 * 3 - 12) / 2; // padding + gap + margin
 
 export default class AdminProductScreen extends React.Component<any, State> {
   private timer?: NodeJS.Timeout;
@@ -106,7 +110,7 @@ export default class AdminProductScreen extends React.Component<any, State> {
   }
 
   loadMore = () => {
-    const { loadingMore, loading, items, total, page, pageSize } = this.state;
+    const { loadingMore, loading, items, total, page } = this.state;
     if (loading || loadingMore) return;
     if (items.length >= total) return;
     this.setState({ page: page + 1, loadingMore: true }, () => this.fetch());
@@ -129,31 +133,19 @@ export default class AdminProductScreen extends React.Component<any, State> {
 
   renderCard = ({ item }: { item: Product }) => (
     <View style={st.card}>
-      <View style={st.cardRow}>
-        <View style={st.thumbWrap}>
-          {item.image_url ? (
-            <Image source={{ uri: item.image_url }} style={st.thumb} />
-          ) : (
-            <View style={st.thumbFallback}><Text style={st.thumbFallbackText}>{firstLetter(item.name)}</Text></View>
-          )}
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={st.title} numberOfLines={1}>{item.name}</Text>
-          <Text style={st.sub} numberOfLines={1}>SKU: {item.sku || '—'}</Text>
-          <View style={st.metaRow}>
-            <Text style={st.meta}>{(item as any).categories?.name || '—'}</Text>
-            <Text style={st.dot}>•</Text>
-            <Text style={st.meta}>{(item as any).brands?.name || '—'}</Text>
-          </View>
-          <Text style={st.price}>Q{money(item.sale_price)}</Text>
-        </View>
+      <View style={st.thumbWrap}>
+        {item.image_url ? (
+          <Image source={{ uri: item.image_url }} style={st.thumb} />
+        ) : (
+          <View style={st.thumbFallback}><Text style={st.thumbFallbackText}>{firstLetter(item.name)}</Text></View>
+        )}
       </View>
-
-      <View style={st.actions}>
-        <Pressable onPress={() => this.openEdit(item.product_id)} style={[st.btn, st.btnWarn]}>
-          <Text style={st.btnWarnText}>Editar</Text>
-        </Pressable>
-      </View>
+      <Text style={st.title} numberOfLines={1}>{item.name}</Text>
+      <Text style={st.sub} numberOfLines={1}>SKU: {item.sku || '—'}</Text>
+      <Text style={st.price}>Q{money(item.sale_price)}</Text>
+      <Pressable onPress={() => this.openEdit(item.product_id)} style={[st.btn, st.btnPrimaryCard]}>
+        <Text style={st.btnPrimaryTextCard}>Editar</Text>
+      </Pressable>
     </View>
   );
 
@@ -164,7 +156,7 @@ export default class AdminProductScreen extends React.Component<any, State> {
     return (
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <SafeAreaView style={st.safe}>
-          {/* Header compacto mobile */}
+          {/* Header */}
           <View style={st.header}>
             <Text style={st.h1}>Productos</Text>
             <Pressable onPress={this.openCreate} style={st.btnPrimary}>
@@ -172,7 +164,7 @@ export default class AdminProductScreen extends React.Component<any, State> {
             </Pressable>
           </View>
 
-          {/* Search + Sort (stacked) */}
+          {/* Search + Sort */}
           <View style={st.toolbar}>
             <TextInput
               placeholder="Buscar por nombre, SKU o código…"
@@ -196,7 +188,7 @@ export default class AdminProductScreen extends React.Component<any, State> {
 
           {/* Lista */}
           {loading && items.length === 0 ? (
-            <View style={st.center}><ActivityIndicator /></View>
+            <View style={st.center}><ActivityIndicator size="large" color="#2563eb" /></View>
           ) : error ? (
             <View style={st.center}><Text style={{ color: '#b91c1c' }}>{error}</Text></View>
           ) : (
@@ -204,7 +196,9 @@ export default class AdminProductScreen extends React.Component<any, State> {
               data={data}
               keyExtractor={(p) => String(p.product_id)}
               renderItem={this.renderCard}
-              contentContainerStyle={{ padding: 12, gap: 12 }}
+              numColumns={2}
+              columnWrapperStyle={{ justifyContent: 'space-between', paddingHorizontal: 12, marginBottom: 12 }}
+              contentContainerStyle={{ paddingBottom: 12 }}
               ListEmptyComponent={<View style={st.center}><Text style={{ color: '#64748b' }}>No hay productos</Text></View>}
               onEndReachedThreshold={0.4}
               onEndReached={this.loadMore}
@@ -230,43 +224,35 @@ export default class AdminProductScreen extends React.Component<any, State> {
 }
 
 const st = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#f8fafc' },
-  header: { paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  h1: { fontSize: 22, fontWeight: '800', color: '#0f172a' },
-  btnPrimary: { marginLeft: 'auto', backgroundColor: '#2563eb', paddingHorizontal: 14, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  btnPrimaryText: { color: 'white', fontWeight: '800' },
+  safe: { flex: 1, backgroundColor: '#e0f2fe' }, // azul celeste claro
+  header: { paddingHorizontal: 12, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  h1: { fontSize: 26, fontWeight: '900', color: '#1e3a8a' },
+  btnPrimary: { marginLeft: 'auto', backgroundColor: '#2563eb', paddingHorizontal: 14, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  btnPrimaryText: { color: 'white', fontWeight: '900', fontSize: 16 },
 
   toolbar: { padding: 12, gap: 10 },
-  input: { height: 44, borderWidth: 2, borderColor: '#e5e7eb', borderRadius: 12, paddingHorizontal: 12, backgroundColor: 'white' },
+  input: { height: 44, borderWidth: 2, borderColor: '#3b82f6', borderRadius: 14, paddingHorizontal: 12, backgroundColor: 'white' },
   sortRow: { flexDirection: 'row', gap: 8 },
-  sortBtn: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1, borderColor: '#e5e7eb', backgroundColor: 'white' },
-  sortActive: { backgroundColor: '#eef2ff', borderColor: '#6366f1' },
-  sortText: { color: '#111827' },
-  sortTextActive: { color: '#3730a3', fontWeight: '700' },
+  sortBtn: { flex: 1, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: '#3b82f6', backgroundColor: 'white', alignItems: 'center' },
+  sortActive: { backgroundColor: '#93c5fd' },
+  sortText: { color: '#1e3a8a', fontWeight: '600' },
+  sortTextActive: { color: '#1e40af', fontWeight: '900' },
 
-  card: { backgroundColor: 'white', borderRadius: 16, borderWidth: 1, borderColor: '#e5e7eb', padding: 12 },
-  cardRow: { flexDirection: 'row', gap: 12 },
-  thumbWrap: { width: 64, height: 64, borderRadius: 12, overflow: 'hidden', backgroundColor: 'white', borderWidth: 1, borderColor: '#e5e7eb' },
+  card: { width: CARD_WIDTH, backgroundColor: 'white', borderRadius: 18, padding: 12, shadowColor: '#000', shadowOpacity: 0.1, shadowOffset: { width: 0, height: 4 }, shadowRadius: 8, elevation: 5 },
+  thumbWrap: { width: '100%', height: 120, borderRadius: 14, overflow: 'hidden', marginBottom: 8, backgroundColor: '#60a5fa', alignItems: 'center', justifyContent: 'center' },
   thumb: { width: '100%', height: '100%' },
-  thumbFallback: { width: '100%', height: '100%', backgroundColor: '#7c3aed', alignItems: 'center', justifyContent: 'center' },
-  thumbFallbackText: { color: 'white', fontWeight: '800', fontSize: 18 },
+  thumbFallback: { width: '100%', height: '100%', backgroundColor: '#2563eb', alignItems: 'center', justifyContent: 'center' },
+  thumbFallbackText: { color: 'white', fontWeight: '900', fontSize: 24 },
 
-  title: { fontWeight: '800', color: '#111827', fontSize: 16 },
-  sub: { color: '#6b7280', marginTop: 2 },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
-  meta: { color: '#475569' },
-  dot: { color: '#94a3b8' },
-  price: { marginTop: 4, fontWeight: '800', color: '#16a34a' },
+  title: { fontWeight: '800', color: '#1e3a8a', fontSize: 16, marginBottom: 2 },
+  sub: { color: '#374151', fontSize: 12, marginBottom: 4 },
+  price: { fontWeight: '900', color: '#10b981', fontSize: 16, marginBottom: 8 },
 
-  actions: { flexDirection: 'row', gap: 8, marginTop: 10 },
   btn: { height: 40, paddingHorizontal: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  btnWarn: { backgroundColor: '#f59e0b', borderColor: '#fcd34d' },
-  btnWarnText: { color: 'white', fontWeight: '800' },
-  btnDanger: { backgroundColor: '#fee2e2', borderColor: '#fecaca' },
-  btnDangerText: { color: '#b91c1c', fontWeight: '800' },
-  btnGhost: { borderColor: '#e5e7eb', backgroundColor: 'white' },
-  btnGhostText: { color: '#111827', fontWeight: '700' },
+  btnPrimaryCard: { backgroundColor: '#2563eb', borderColor: '#2563eb' },
+  btnPrimaryTextCard: { color: 'white', fontWeight: '900' },
+  btnGhost: { borderColor: '#2563eb', backgroundColor: 'white' },
+  btnGhostText: { color: '#2563eb', fontWeight: '700' },
 
   center: { padding: 24, alignItems: 'center', justifyContent: 'center' },
-  disabled: { opacity: 0.6 },
 });

@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   View,
+  Animated,
   Text,
   StyleSheet,
   FlatList,

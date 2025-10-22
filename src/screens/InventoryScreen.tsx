@@ -8,7 +8,9 @@ import {
   TextInput,
   SafeAreaView,
   Alert,
+  Animated,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useInventory } from '../contexts/InventoryContext';
 
 const InventoryScreen = ({ navigation }: any) => {
@@ -26,15 +28,30 @@ const InventoryScreen = ({ navigation }: any) => {
   const getEstadoColor = (estado: string) => {
     switch (estado) {
       case 'Stock alto':
-        return '#4CAF50';
+        return '#10b981';
       case 'Stock medio':
-        return '#FFA726';
+        return '#f59e0b';
       case 'Stock bajo':
-        return '#FF5722';
+        return '#ef4444';
       case 'Sin stock':
-        return '#9E9E9E';
+        return '#6b7280';
       default:
-        return '#FFA726';
+        return '#f59e0b';
+    }
+  };
+
+  const getEstadoIcon = (estado: string) => {
+    switch (estado) {
+      case 'Stock alto':
+        return '✅';
+      case 'Stock medio':
+        return '⚠️';
+      case 'Stock bajo':
+        return '🔴';
+      case 'Sin stock':
+        return '❌';
+      default:
+        return '⚠️';
     }
   };
 
@@ -49,124 +66,149 @@ const InventoryScreen = ({ navigation }: any) => {
     );
   };
 
-  const renderProduct = ({ item }: any) => (
-    <View style={styles.productRow}>
-      <View style={styles.idCell}>
+  const renderProduct = ({ item, index }: any) => (
+    <Animated.View style={[styles.productCard, { opacity: 1 }]}>
+      <View style={styles.productHeader}>
         <View style={styles.idBadge}>
-          <Text style={styles.idText}>{item.id}</Text>
+          <Text style={styles.idText}>#{item.id}</Text>
+        </View>
+        <View style={styles.productInfo}>
+          <Text style={styles.productName}>{item.nombre}</Text>
+          <View style={styles.quantityBadge}>
+            <Text style={styles.quantityLabel}>Stock:</Text>
+            <Text style={styles.quantityValue}>{item.cantidad}</Text>
+          </View>
         </View>
       </View>
       
-      <View style={styles.nameCell}>
-        <Text style={styles.productName}>{item.nombre}</Text>
-      </View>
-      
-      <View style={styles.statusCell}>
-        <View style={[styles.statusBadge, { backgroundColor: getEstadoColor(item.estado) + '20' }]}>
+      <View style={styles.productFooter}>
+        <View style={[styles.statusBadge, { backgroundColor: getEstadoColor(item.estado) + '15', borderColor: getEstadoColor(item.estado) }]}>
+          <Text style={styles.statusIcon}>{getEstadoIcon(item.estado)}</Text>
           <Text style={[styles.statusText, { color: getEstadoColor(item.estado) }]}>
-            ⚠ {item.estado}
+            {item.estado}
           </Text>
         </View>
+        
+        <TouchableOpacity 
+          style={styles.deleteButton}
+          onPress={() => handleDelete(item.id)}
+        >
+          <LinearGradient
+            colors={['#ef4444', '#dc2626']}
+            style={styles.deleteGradient}
+          >
+            <Text style={styles.deleteIcon}>🗑️</Text>
+          </LinearGradient>
+        </TouchableOpacity>
       </View>
-      
-      <View style={styles.quantityCell}>
-        <Text style={styles.quantity}>{item.cantidad}</Text>
-      </View>
-      
-      <TouchableOpacity 
-        style={styles.deleteButton}
-        onPress={() => handleDelete(item.id)}
-      >
-        <Text style={styles.deleteText}>🗑️</Text>
-      </TouchableOpacity>
-    </View>
+    </Animated.View>
   );
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Inventario de Stock</Text>
-        <View style={styles.headerRight}>
-          <View style={styles.totalBadge}>
-            <Text style={styles.totalLabel}>Total productos</Text>
-            <Text style={styles.totalNumber}>{totalProducts}</Text>
+      {/* Header con gradiente */}
+      <LinearGradient
+        colors={['#667eea', '#764ba2']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.header}
+      >
+        <View style={styles.headerContent}>
+          <View>
+            <Text style={styles.title}>📦 Inventario</Text>
+            <Text style={styles.subtitle}>{filteredProducts.length} productos</Text>
           </View>
-          <TouchableOpacity style={styles.exportButton}>
-            <Text style={styles.exportText}>📄 Exportar PDF</Text>
+          
+          <View style={styles.headerRight}>
+            <View style={styles.totalBadge}>
+              <Text style={styles.totalLabel}>Total</Text>
+              <Text style={styles.totalNumber}>{totalProducts}</Text>
+            </View>
+            <TouchableOpacity style={styles.exportButton}>
+              <LinearGradient
+                colors={['#f59e0b', '#d97706']}
+                style={styles.exportGradient}
+              >
+                <Text style={styles.exportText}>📄 PDF</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Buscador */}
+        <View style={styles.searchContainer}>
+          <View style={styles.searchWrapper}>
+            <Text style={styles.searchIcon}>🔍</Text>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Buscar producto..."
+              placeholderTextColor="#94a3b8"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
+        </View>
+
+        {/* Filtros */}
+        <View style={styles.filtersContainer}>
+          <TouchableOpacity 
+            style={[styles.filterChip, selectedFilter === 'Todos' && styles.filterChipActive]}
+            onPress={() => setSelectedFilter('Todos')}
+          >
+            <Text style={[styles.filterText, selectedFilter === 'Todos' && styles.filterTextActive]}>
+              Todos
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.filterChip, selectedFilter === 'ID' && styles.filterChipActive]}
+            onPress={() => setSelectedFilter('ID')}
+          >
+            <Text style={[styles.filterText, selectedFilter === 'ID' && styles.filterTextActive]}>
+              ID ↓
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.filterChip, selectedFilter === 'Producto' && styles.filterChipActive]}
+            onPress={() => setSelectedFilter('Producto')}
+          >
+            <Text style={[styles.filterText, selectedFilter === 'Producto' && styles.filterTextActive]}>
+              A-Z
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.filterChip, selectedFilter === 'Estado' && styles.filterChipActive]}
+            onPress={() => setSelectedFilter('Estado')}
+          >
+            <Text style={[styles.filterText, selectedFilter === 'Estado' && styles.filterTextActive]}>
+              Estado
+            </Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </LinearGradient>
 
-      <View style={styles.subtitle}>
-        <Text style={styles.subtitleText}>{filteredProducts.length} productos encontrados</Text>
-      </View>
-
-      <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Buscar por nombre o ID del producto..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-      </View>
-
-      <View style={styles.filtersContainer}>
-        <TouchableOpacity 
-          style={[styles.filterButton, selectedFilter === 'ID' && styles.filterButtonActive]}
-          onPress={() => setSelectedFilter('ID')}
-        >
-          <Text style={[styles.filterText, selectedFilter === 'ID' && styles.filterTextActive]}>
-            ID ↓
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={[styles.filterButton, selectedFilter === 'Producto' && styles.filterButtonActive]}
-          onPress={() => setSelectedFilter('Producto')}
-        >
-          <Text style={[styles.filterText, selectedFilter === 'Producto' && styles.filterTextActive]}>
-            Producto ↓
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={[styles.filterButton, selectedFilter === 'Estado' && styles.filterButtonActive]}
-          onPress={() => setSelectedFilter('Estado')}
-        >
-          <Text style={[styles.filterText, selectedFilter === 'Estado' && styles.filterTextActive]}>
-            Estado ↓
-          </Text>
-        </TouchableOpacity>
-
-        <View style={styles.rangeContainer}>
-          <Text style={styles.rangeLabel}>Cantidad</Text>
-          <View style={styles.rangeInputs}>
-            <TextInput style={styles.rangeInput} placeholder="Min" />
-            <Text style={styles.rangeSeparator}>—</Text>
-            <TextInput style={styles.rangeInput} placeholder="Máx" />
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.tableHeader}>
-        <Text style={styles.headerCellId}>ID</Text>
-        <Text style={styles.headerCellName}>Producto</Text>
-        <Text style={styles.headerCellStatus}>Estado</Text>
-        <Text style={styles.headerCellQuantity}>Cantidad</Text>
-      </View>
-
+      {/* Lista de productos */}
       <FlatList
         data={filteredProducts}
         renderItem={renderProduct}
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
       />
 
+      {/* FAB con gradiente */}
       <TouchableOpacity 
         style={styles.fab}
         onPress={() => navigation.navigate('AddProduct')}
       >
-        <Text style={styles.fabText}>+</Text>
+        <LinearGradient
+          colors={['#667eea', '#764ba2']}
+          style={styles.fabGradient}
+        >
+          <Text style={styles.fabText}>+</Text>
+        </LinearGradient>
       </TouchableOpacity>
     </SafeAreaView>
   );
@@ -175,224 +217,272 @@ const InventoryScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FA',
+    backgroundColor: '#f1f5f9',
   },
   header: {
+    paddingTop: 20,
+    paddingBottom: 24,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 24,
+    marginBottom: 20,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#5B5FE3',
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#fff',
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontWeight: '600',
+    marginTop: 4,
   },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 15,
+    gap: 12,
   },
   totalBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 16,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   totalLabel: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 11,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   totalNumber: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#fff',
+    marginTop: 2,
   },
   exportButton: {
-    backgroundColor: '#FFA726',
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#f59e0b',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  exportGradient: {
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: 16,
   },
   exportText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  subtitle: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    backgroundColor: '#FFFFFF',
-  },
-  subtitleText: {
+    color: '#fff',
+    fontWeight: '800',
     fontSize: 14,
-    color: '#666',
+    letterSpacing: 0.3,
   },
   searchContainer: {
-    padding: 20,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    paddingHorizontal: 24,
+    marginBottom: 16,
+  },
+  searchWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 20,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  searchIcon: {
+    fontSize: 18,
+    marginRight: 12,
   },
   searchInput: {
-    backgroundColor: '#F5F7FA',
-    padding: 12,
-    borderRadius: 8,
-    fontSize: 14,
+    flex: 1,
+    fontSize: 16,
+    color: '#1e293b',
+    fontWeight: '600',
   },
   filtersContainer: {
     flexDirection: 'row',
-    padding: 15,
-    backgroundColor: '#5B5FE3',
-    gap: 10,
-    alignItems: 'center',
+    paddingHorizontal: 24,
+    gap: 8,
   },
-  filterButton: {
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 6,
+  filterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 999,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
-  filterButtonActive: {
-    backgroundColor: '#FFFFFF',
+  filterChipActive: {
+    backgroundColor: '#fff',
+    borderColor: '#fff',
   },
   filterText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 13,
+    letterSpacing: 0.3,
   },
   filterTextActive: {
-    color: '#5B5FE3',
-  },
-  rangeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginLeft: 'auto',
-    gap: 10,
-  },
-  rangeLabel: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  rangeInputs: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  rangeInput: {
-    backgroundColor: '#FFFFFF',
-    width: 60,
-    padding: 6,
-    borderRadius: 4,
-    textAlign: 'center',
-  },
-  rangeSeparator: {
-    color: '#FFFFFF',
-  },
-  tableHeader: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 15,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  headerCellId: {
-    width: 60,
-    fontWeight: '600',
-    color: '#666',
-  },
-  headerCellName: {
-    flex: 1,
-    fontWeight: '600',
-    color: '#666',
-  },
-  headerCellStatus: {
-    width: 150,
-    fontWeight: '600',
-    color: '#666',
-  },
-  headerCellQuantity: {
-    width: 80,
-    fontWeight: '600',
-    color: '#666',
-    textAlign: 'center',
+    color: '#667eea',
   },
   listContent: {
-    backgroundColor: '#FFFFFF',
+    padding: 20,
+    paddingBottom: 100,
   },
-  productRow: {
+  productCard: {
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+  },
+  productHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  idCell: {
-    width: 60,
+    marginBottom: 16,
   },
   idBadge: {
-    width: 35,
-    height: 35,
-    borderRadius: 17.5,
-    backgroundColor: '#5B5FE3',
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: '#f1f5f9',
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: 16,
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
   },
   idText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#667eea',
+    letterSpacing: -0.5,
   },
-  nameCell: {
+  productInfo: {
     flex: 1,
   },
   productName: {
-    fontSize: 14,
-    color: '#333',
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#1e293b',
+    marginBottom: 8,
+    letterSpacing: -0.3,
   },
-  statusCell: {
-    width: 150,
-  },
-  statusBadge: {
+  quantityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f1f5f9',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 4,
+    borderRadius: 999,
+    alignSelf: 'flex-start',
   },
-  statusText: {
-    fontSize: 12,
+  quantityLabel: {
+    fontSize: 13,
+    color: '#64748b',
     fontWeight: '600',
+    marginRight: 6,
   },
-  quantityCell: {
-    width: 80,
+  quantityValue: {
+    fontSize: 15,
+    fontWeight: '900',
+    color: '#1e293b',
+  },
+  productFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
   },
-  quantity: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
+    borderWidth: 2,
+    gap: 6,
+  },
+  statusIcon: {
+    fontSize: 14,
+  },
+  statusText: {
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 0.3,
   },
   deleteButton: {
-    padding: 10,
+    borderRadius: 14,
+    overflow: 'hidden',
+    shadowColor: '#ef4444',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  deleteText: {
+  deleteGradient: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 14,
+  },
+  deleteIcon: {
     fontSize: 18,
   },
   fab: {
     position: 'absolute',
-    right: 20,
-    bottom: 20,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#5B5FE3',
+    right: 24,
+    bottom: 24,
+    borderRadius: 28,
+    overflow: 'hidden',
+    shadowColor: '#667eea',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  fabGradient: {
+    width: 64,
+    height: 64,
+    borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
   },
   fabText: {
-    fontSize: 30,
-    color: '#FFFFFF',
+    fontSize: 32,
+    color: '#fff',
     fontWeight: '300',
+    marginTop: -2,
   },
 });
 

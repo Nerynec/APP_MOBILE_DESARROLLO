@@ -5,9 +5,8 @@ import React, {
   useEffect,
   useState,
 } from "react";
-import * as SecureStore from "expo-secure-store";
 import { tokenStorage } from "../utils/storage";
-import { loginApi, AuthUser, registerApi } from "../services/auth.api";
+import { loginApi, AuthUser, registerApi, meApi } from "../services/auth.api";
 
 type AuthStatus = "idle" | "checking" | "authenticated" | "unauthenticated";
 
@@ -16,7 +15,6 @@ type RegisterInput = { fullName: string; email: string; password: string };
 type AuthContextType = {
   user: AuthUser | null;
   status: AuthStatus;
-  // 👇 devolvemos el usuario para poder decidir navegación por rol
   login: (i: { email: string; password: string }) => Promise<AuthUser>;
   logout: () => Promise<void>;
   register: (i: RegisterInput) => Promise<void>;
@@ -24,50 +22,68 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [status, setStatus] = useState<AuthStatus>("checking");
 
-  // Cargar sesión al inicio (simple: si hay token -> authenticated)
+  // Cargar sesión al inicio
   useEffect(() => {
     (async () => {
+      setStatus("checking");
       try {
-        const token = await SecureStore.getItemAsync("token");
+        const token = await tokenStorage.get();
         if (!token) {
           setStatus("unauthenticated");
+          setUser(null);
           return;
         }
-        // Opcional: podrías llamar /auth/me para obtener el user
-        setStatus("authenticated");
+        // Opcional: llamar /auth/me para obtener datos del usuario real
+        const currentUser = await meApi(token).catch(() => null);
+        if (currentUser) {
+          setUser(currentUser);
+          setStatus("authenticated");
+        } else {
+          await tokenStorage.delete();
+          setUser(null);
+          setStatus("unauthenticated");
+        }
       } catch {
-        await SecureStore.deleteItemAsync("token");
+        await tokenStorage.delete();
         setUser(null);
         setStatus("unauthenticated");
       }
     })();
   }, []);
 
-  const login = useCallback(async ({ email, password }: { email: string; password: string }) => {
-    const { token, user } = await loginApi({ email, password });
-    await tokenStorage.set(token);
-    setUser(user);
-    setStatus("authenticated");
-    return user; // 👈 importante para el redirect por rol
-  }, []);
+  const login = useCallback(
+    async ({ email, password }: { email: string; password: string }) => {
+      const { token, user } = await loginApi({ email, password });
+      await tokenStorage.set(token);
+      setUser(user);
+      setStatus("authenticated");
+      return user;
+    },
+    []
+  );
 
   const logout = useCallback(async () => {
-    await SecureStore.deleteItemAsync("token");
+    await tokenStorage.delete();
     setUser(null);
     setStatus("unauthenticated");
   }, []);
 
-  const register = useCallback(async ({ fullName, email, password }: RegisterInput) => {
-    await registerApi({ fullName, email, password });
-    const { token, user } = await loginApi({ email, password });
-    await tokenStorage.set(token);
-    setUser(user);
-    setStatus("authenticated");
-  }, []);
+  const register = useCallback(
+    async ({ fullName, email, password }: RegisterInput) => {
+      await registerApi({ fullName, email, password });
+      const { token, user } = await loginApi({ email, password });
+      await tokenStorage.set(token);
+      setUser(user);
+      setStatus("authenticated");
+    },
+    []
+  );
 
   return (
     <AuthContext.Provider value={{ user, status, login, logout, register }}>

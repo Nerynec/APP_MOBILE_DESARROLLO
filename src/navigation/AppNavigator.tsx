@@ -1,6 +1,6 @@
 import React from "react";
 import { createStackNavigator, TransitionPresets } from "@react-navigation/stack";
-import { StyleSheet } from "react-native";
+import { StyleSheet, View, ActivityIndicator } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "../contexts/AuthContext";
 import { useCart } from "../contexts/CartContext";
@@ -22,10 +22,10 @@ import ProductFormScreen from "../screens/ProductFormScreen";
 const Stack = createStackNavigator();
 
 export default function AppNavigator() {
-  const { user } = useAuth();
+  const { user, status } = useAuth();
   const cart = useCart();
+
   const isAdmin = !!user?.roles?.includes("ADMIN");
-  console.log(isAdmin);
 
   const commonScreenOptions = {
     headerBackground: () => (
@@ -42,9 +42,18 @@ export default function AppNavigator() {
     ...TransitionPresets.SlideFromRightIOS,
   };
 
+  if (status === "checking") {
+    // Loader mientras valida sesión
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color="#0b5ed7" />
+      </View>
+    );
+  }
+
   return (
     <Stack.Navigator screenOptions={commonScreenOptions}>
-      {user ? (
+      {status === "authenticated" ? (
         <>
           {/* Comunes */}
           <Stack.Screen
@@ -72,12 +81,12 @@ export default function AppNavigator() {
           {/* Solo ADMIN */}
           {isAdmin && (
             <>
-              <Stack.Screen name="Dashboard" component={DashboardScreen} options={{ title: "📊 Dashboard" }} />
-              <Stack.Screen name="Compras" component={ComprasScreen} options={{ title: "🧾 Compras" }} />
-              <Stack.Screen name="Reporteria" component={ReporteriaScreen} options={{ title: "📈 Reportería" }} />
-              <Stack.Screen name="Inventory" component={InventoryScreen} options={{ title: "📦 Inventario" }} />
+              <Stack.Screen name="Dashboard" component={DashboardScreen} options={{ title: "Dashboard" }} />
+              <Stack.Screen name="Compras" component={ComprasScreen} options={{ title: "Compras" }} />
+              <Stack.Screen name="Reporteria" component={ReporteriaScreen} options={{ title: "Reportería" }} />
+              <Stack.Screen name="Inventory" component={InventoryScreen} options={{ title: "Inventario" }} />
               <Stack.Screen name="Usuarios" component={UsersScreen} options={{ title: "👥 Usuarios" }} />
-              <Stack.Screen name="Administrar" component={AdminProductScreen} options={{ title: "🧰 Administrar" }} />
+              <Stack.Screen name="Administrar" component={AdminProductScreen} options={{ title: "Administrar" }} />
               <Stack.Screen
                 name="ProductForm"
                 component={ProductFormScreen}
@@ -93,7 +102,7 @@ export default function AppNavigator() {
           <Stack.Screen
             name="Login"
             component={LoginScreen}
-            options={{ headerShown: false, animationTypeForReplace: user ? "pop" : "push" }}
+            options={{ headerShown: false, animationTypeForReplace: "push" }}
           />
           <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
         </>
