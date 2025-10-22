@@ -5,7 +5,11 @@ import { Text, Card, Button, Divider, Surface, IconButton, useTheme, Snackbar } 
 import { syncServerCart, checkout as apiCheckout } from '../services/sales.api';
 import { useCart } from '../contexts/CartContext';
 import { Ionicons } from '@expo/vector-icons';
+<<<<<<< HEAD
 import { debugAuth } from '../services/http'; // opcional
+=======
+import { placeOrderMobile, CheckoutPayload } from '../services/sales.api';
+>>>>>>> a5fae1bd065d7b86b76e039055a4283ebfab0280
 
 export default function CheckoutScreen({ navigation }: any) {
   const { items, total, clear } = useCart();
@@ -27,6 +31,7 @@ export default function CheckoutScreen({ navigation }: any) {
     try {
       setLoading(true);
 
+<<<<<<< HEAD
       // (Opcional) comprueba auth/usuario
       try {
         const me = await debugAuth?.();
@@ -90,6 +95,69 @@ export default function CheckoutScreen({ navigation }: any) {
       </Card>
     );
   };
+=======
+    const subtotal = items.reduce(
+      (acc: number, i: any) => acc + Number(i.product.price ?? 0) * Number(i.quantity ?? 0),
+      0
+    );
+
+    const payload: CheckoutPayload = {
+      items: items.map((i: any) => ({
+        productId: i.product.id,
+        quantity: Number(i.quantity),
+        unitPrice: Number(i.product.price ?? 0),
+      })),
+      summary: {
+        subtotal,
+        tax: 0,        // si calculas IVA en la app, ponlo aquí
+        shipping: 0,   // si tienes envío, ponlo aquí
+        total: subtotal, // se calcula para UI, pero el service lo quita antes del checkout
+      },
+      customer: { name: 'Consumidor Final', phone: '0000-0000' }, // reemplaza con tu formulario si ya lo tienes
+      delivery: { method: 'pickup' },  // o 'delivery' con address en customer
+      payment: { method: 'cash' },     // 'card' | 'transfer' (+ reference)
+    };
+
+    const receipt = await placeOrderMobile(payload);
+    clear();
+    navigation?.navigate('Success', { receipt });
+  } catch (e: any) {
+    const msg =
+      e?.response?.data?.message ||
+      e?.response?.data?.error ||
+      e?.message ||
+      'No se pudo procesar la compra';
+    Alert.alert('Error', msg);
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+  const renderItem = ({ item }: any) => (
+    <Card style={styles.itemCard} mode="elevated">
+      <Card.Content style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <View>
+          <Text variant="titleMedium" numberOfLines={1} style={{ fontWeight: '700' }}>
+            {item.product.name}
+          </Text>
+          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+            Q {item.product.price.toFixed(2)} c/u
+          </Text>
+        </View>
+
+        <View style={{ alignItems: 'flex-end' }}>
+          <Text variant="bodyMedium" style={{ fontWeight: '700' }}>
+            x{item.quantity}
+          </Text>
+          <Text variant="titleSmall" style={{ color: theme.colors.primary, fontWeight: '800' }}>
+            Q {(item.product.price * item.quantity).toFixed(2)}
+          </Text>
+        </View>
+      </Card.Content>
+    </Card>
+  );
+>>>>>>> a5fae1bd065d7b86b76e039055a4283ebfab0280
 
   return (
     <SafeAreaView style={styles.container}>
