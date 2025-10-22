@@ -2,28 +2,34 @@ import React from 'react';
 import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { Product } from '../data/products';
+import type { UiProduct } from '../models/product';
 
 type Props = {
-  product: Product;
-  onAdd: (p: Product) => void;
-  onEdit?: () => void;      // 👈 nuevo
-  onDelete?: () => void;    // 👈 nuevo
-  isAdmin?: boolean;        // 👈 nuevo
+  product: UiProduct;               // 👈 UiProduct (de DB)
+  onAdd: (p: UiProduct) => void;    // el padre decide cómo mapear
+  onEdit?: () => void;
+  onDelete?: () => void;
+  isAdmin?: boolean;
 };
 
+const n = (x: any, d = 0) => {
+  const v = Number(x);
+  return Number.isFinite(v) ? v : d;
+};
+const placeholder = 'https://via.placeholder.com/300x300.png?text=Producto';
+
 export default function ProductCard({ product, onAdd, onEdit, onDelete, isAdmin }: Props) {
+  const price = n(product?.price, 0);
+  const img = product?.imageUrl ? String(product.imageUrl) : placeholder;
+
   return (
     <View style={styles.card}>
-      {/* Imagen */}
-      <Image source={{ uri: product.image }} style={styles.image} />
+      <Image source={{ uri: img }} style={styles.image} />
 
-      {/* Info */}
       <View style={styles.info}>
-        <Text style={styles.name}>{product.name}</Text>
-        <Text style={styles.price}>Q {product.price.toFixed(2)}</Text>
+        <Text style={styles.name}>{product?.name ?? 'Producto'}</Text>
+        <Text style={styles.price}>Q {price.toFixed(2)}</Text>
 
-        {/* Acciones */}
         {isAdmin ? (
           <View style={styles.adminActions}>
             <Pressable onPress={onEdit} style={({ pressed }) => [styles.iconButton, pressed && { opacity: 0.7 }]}>
@@ -59,52 +65,13 @@ const styles = StyleSheet.create({
     elevation: 4,
     alignItems: 'center',
   },
-  image: {
-    width: 90,
-    height: 90,
-    borderRadius: 12,
-    marginRight: 12,
-  },
-  info: {
-    flex: 1,
-  },
-  name: {
-    fontWeight: '700',
-    fontSize: 16,
-    color: '#111827',
-    marginBottom: 4,
-  },
-  price: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#059669',
-    marginBottom: 8,
-  },
-  button: {
-    alignSelf: 'flex-start',
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  buttonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: '700',
-    marginLeft: 6,
-    fontSize: 14,
-  },
-  adminActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  iconButton: {
-    padding: 6,
-    borderRadius: 8,
-    backgroundColor: '#f3f4f6',
-  },
+  image: { width: 90, height: 90, borderRadius: 12, marginRight: 12, backgroundColor: '#eee' },
+  info: { flex: 1 },
+  name: { fontWeight: '700', fontSize: 16, color: '#111827', marginBottom: 4 },
+  price: { fontSize: 14, fontWeight: '600', color: '#059669', marginBottom: 8 },
+  button: { alignSelf: 'flex-start', borderRadius: 12, overflow: 'hidden' },
+  buttonGradient: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 12 },
+  buttonText: { color: '#fff', fontWeight: '700', marginLeft: 6, fontSize: 14 },
+  adminActions: { flexDirection: 'row', gap: 8 },
+  iconButton: { padding: 6, borderRadius: 8, backgroundColor: '#f3f4f6' },
 });

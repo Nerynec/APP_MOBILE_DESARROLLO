@@ -39,11 +39,6 @@ export default function AppNavigatorHeader({ navigation, cart }: any) {
         )}
       </TouchableOpacity>
 
-      {itemCount > 0 && (
-        <TouchableOpacity onPress={handleClear} style={styles.cartClearButton}>
-          <Ionicons name="trash-outline" size={22} color="#fff" />
-        </TouchableOpacity>
-      )}
 
       {/* 🔹 Menú modal */}
       <Modal

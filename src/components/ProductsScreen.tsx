@@ -1,150 +1,143 @@
-import React from 'react';
-import { SafeAreaView, View, Text, ScrollView, Pressable, Alert, StyleSheet } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import React, { useRef, useEffect, useState } from 'react';
+import { SafeAreaView, FlatList, StyleSheet, Animated, View, Alert, RefreshControl } from 'react-native';
+import { Text, Surface, useTheme, IconButton, Badge, FAB, Searchbar, ActivityIndicator } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
+import ProductCard from '../components/ProductCard';
 import { useCart } from '../contexts/CartContext';
+import { useAuth } from '../contexts/AuthContext';
+import { http } from '../services/http';
 
-export default function CheckoutScreen({ navigation }: any) {
-  const { items, total, clear } = useCart();
+import type { UiProduct } from '../models/product';
+import { mapApiToUi, toCartProduct } from '../models/product';
 
-  const onConfirm = () => {
-    Alert.alert(
-      '¡Compra Exitosa! 🎉',
-      `Tu pedido por Q ${total.toFixed(2)} ha sido procesado correctamente.\n\n¡Gracias por tu compra!`,
-      [
-        {
-          text: 'Continuar Comprando',
-          onPress: () => {
-            clear();
-            navigation.navigate('Products');
-          },
-        },
-      ]
-    );
+type ApiProduct = {
+  product_id: number;
+  sku: string;
+  name: string;
+  sale_price: string;
+  image_url: string | null;
+  brands?: { name: string };
+  categories?: { name: string };
+};
+
+export default function ProductsScreen({ navigation }: any) {
+  const { add, items, clear } = useCart();
+  const { logout } = useAuth();
+  const theme = useTheme();
+
+  const [search, setSearch] = useState('');
+  const [products, setProducts] = useState<UiProduct[]>([]);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 20;
+  const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [hasNext, setHasNext] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchPage = async (pageToLoad: number, replace = false) => {
+    const setLoad = pageToLoad === 1 && !refreshing ? setLoading : setLoadingMore;
+    setLoad(true);
+    setError(null);
+    try {
+      const res = await http.get<{ data: ApiProduct[] }>('/catalog/products', {
+        params: { search: search || undefined, page: pageToLoad, pageSize: PAGE_SIZE },
+      });
+      const list = (res.data?.data ?? []).map(mapApiToUi);
+      setHasNext(list.length === PAGE_SIZE);
+      if (replace) setProducts(list);
+      else setProducts((prev) => (pageToLoad === 1 ? list : [...prev, ...list]));
+      setPage(pageToLoad);
+    } catch (e: any) {
+      setError(e?.response?.data?.message || 'No se pudieron cargar los productos');
+    } finally {
+      setLoad(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => { fetchPage(1, true); }, []);
+  const onSearchSubmit = () => { setRefreshing(true); fetchPage(1, true); };
+  const onEndReached = () => { if (!loadingMore && !loading && hasNext) fetchPage(page + 1); };
+  const onRefresh = () => { setRefreshing(true); fetchPage(1, true); };
+
+  const cartItemsCount = items.reduce((sum, item) => sum + item.quantity, 0);
+
+  // anim
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => { Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start(); }, []);
+
+  const handleClearCart = () => {
+    if (!cartItemsCount) return;
+    Alert.alert('Vaciar carrito', '¿Deseas eliminar todos los productos?', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Vaciar', style: 'destructive', onPress: clear },
+    ]);
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <LinearGradient colors={['#34d399', '#059669']} style={styles.header}>
-        <Text style={styles.headerTitle}>💳 Checkout</Text>
-        <Text style={styles.headerSubtitle}>Revisa tu pedido antes de confirmar</Text>
-      </LinearGradient>
-
-      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Resumen del Pedido */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>📦 Resumen del Pedido</Text>
-          {items.map((item, index) => (
-            <View
-              key={item.product.id}
-              style={[
-                styles.itemRow,
-                index < items.length - 1 && styles.itemDivider
-              ]}
-            >
-              <View style={{ flex: 1 }}>
-                <Text style={styles.itemName}>{item.product.name}</Text>
-                <Text style={styles.itemQty}>
-                  {item.quantity} × Q {item.product.price.toFixed(2)}
-                </Text>
-              </View>
-              <Text style={styles.itemTotal}>Q {(item.product.price * item.quantity).toFixed(2)}</Text>
-            </View>
-          ))}
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <Surface elevation={3} style={styles.header}>
+        <View>
+          <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant }}>Bienvenido</Text>
+          <Text variant="headlineMedium" style={{ fontWeight: '800', color: theme.colors.primary }}>Nuestros Productos</Text>
         </View>
-
-        {/* Desglose de costos */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>💰 Desglose</Text>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryText}>Subtotal</Text>
-            <Text style={styles.summaryValue}>Q {total.toFixed(2)}</Text>
+        <View style={styles.actions}>
+          <View>
+            <IconButton icon={() => <Ionicons name="cart" size={22} color="#fff" />} style={{ backgroundColor: theme.colors.primary }} onPress={() => navigation.navigate('Cart')} />
+            {cartItemsCount > 0 && <Badge size={18} style={{ position: 'absolute', top: 2, right: 2, backgroundColor: theme.colors.error, color: '#fff' }}>{cartItemsCount}</Badge>}
           </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryText}>Envío</Text>
-            <Text style={[styles.summaryValue, { color: '#059669' }]}>Gratis 🎁</Text>
-          </View>
-          <View style={styles.totalRow}>
-            <Text style={styles.totalText}>Total</Text>
-            <Text style={styles.totalValue}>Q {total.toFixed(2)}</Text>
-          </View>
+          {cartItemsCount > 0 && (
+            <IconButton icon={() => <Ionicons name="trash-outline" size={22} color="#fff" />} style={{ backgroundColor: theme.colors.error }} onPress={handleClearCart} />
+          )}
+          <IconButton icon={() => <Ionicons name="log-out-outline" size={22} color={theme.colors.error} />} onPress={logout} style={styles.logoutBtn} mode="contained-tonal" />
         </View>
+      </Surface>
 
-        {/* Pago Seguro */}
-        <LinearGradient colors={['#e0f2fe', '#c7d2fe']} style={styles.secureCard}>
-          <Text style={styles.secureTitle}>🔒 Pago Seguro</Text>
-          <Text style={styles.secureSubtitle}>
-            Tu información está protegida con encriptación de nivel bancario
-          </Text>
-        </LinearGradient>
-
-        {/* Método de Pago */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>💳 Método de Pago</Text>
-          <Pressable style={styles.paymentMethod}>
-            <View style={styles.paymentIcon}>
-              <Text style={{ fontSize: 22 }}>💳</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.paymentTitle}>Tarjeta de Crédito</Text>
-              <Text style={styles.paymentSubtitle}>**** **** **** 1234</Text>
-            </View>
-            <Ionicons name="checkmark-circle" size={24} color="green" />
-          </Pressable>
-        </View>
-      </ScrollView>
-
-      {/* Botones Fijos */}
-      <View style={styles.bottom}>
-        <LinearGradient colors={['#34d399', '#059669']} style={styles.confirmBtn}>
-          <Pressable onPress={onConfirm} style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <Text style={styles.confirmText}>✨ Confirmar Compra - Q {total.toFixed(2)}</Text>
-          </Pressable>
-        </LinearGradient>
-        <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={styles.backText}>Volver al Carrito</Text>
-        </Pressable>
+      <View style={{ paddingHorizontal: 12, marginBottom: 8 }}>
+        <Searchbar placeholder="Buscar productos" value={search} onChangeText={setSearch} returnKeyType="search" onSubmitEditing={onSearchSubmit} />
       </View>
+
+      <Animated.View style={{ flex: 1, opacity: fadeAnim, transform: [{ translateY: fadeAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }}>
+        {loading && products.length === 0 ? (
+          <View style={{ paddingTop: 40 }}><ActivityIndicator /></View>
+        ) : (
+          <FlatList
+            data={products}
+            keyExtractor={(p) => String(p.id)}
+            renderItem={({ item }) => (
+              <ProductCard
+                product={item}                   // 👈 UiProduct
+                onAdd={(ui) => add(toCartProduct(ui), 1)} // 👈 mapeo al carrito aquí
+              />
+            )}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            onEndReached={onEndReached}
+            onEndReachedThreshold={0.4}
+            ListFooterComponent={loadingMore ? <View style={{ paddingVertical: 16 }}><ActivityIndicator /></View> : null}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          />
+        )}
+        {error ? (
+          <View style={{ padding: 16 }}>
+            <Text style={{ color: theme.colors.error }}>{error}</Text>
+          </View>
+        ) : null}
+      </Animated.View>
+
+      {cartItemsCount > 0 && (
+        <FAB icon="cart-check" label={`Ver carrito (${cartItemsCount})`} style={[styles.fab, { backgroundColor: theme.colors.success }]} color="#fff" onPress={() => navigation.navigate('Cart')} />
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f9fafb' },
-  header: { padding: 24, borderBottomLeftRadius: 30, borderBottomRightRadius: 30, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 10 },
-  headerTitle: { color: '#fff', fontSize: 28, fontWeight: 'bold' },
-  headerSubtitle: { color: '#d1fae5', fontSize: 14, marginTop: 4 },
-
-  scroll: { flex: 1, marginTop: 16, paddingHorizontal: 16 },
-
-  card: { backgroundColor: '#fff', borderRadius: 24, padding: 16, marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8 },
-  cardTitle: { fontSize: 18, fontWeight: 'bold', color: '#111827', marginBottom: 12 },
-  itemRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 },
-  itemDivider: { borderBottomWidth: 1, borderBottomColor: '#e5e7eb' },
-  itemName: { fontSize: 15, fontWeight: '600', color: '#111827' },
-  itemQty: { fontSize: 13, color: '#6b7280' },
-  itemTotal: { fontSize: 16, fontWeight: 'bold', color: '#2563eb' },
-
-  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 },
-  summaryText: { color: '#6b7280', fontSize: 14 },
-  summaryValue: { fontSize: 14, fontWeight: '600', color: '#111827' },
-  totalRow: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: 10, borderTopWidth: 1, borderTopColor: '#e5e7eb' },
-  totalText: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
-  totalValue: { fontSize: 22, fontWeight: 'bold', color: '#2563eb' },
-
-  secureCard: { borderRadius: 20, padding: 16, marginBottom: 16 },
-  secureTitle: { fontSize: 16, fontWeight: 'bold', color: '#111827', marginBottom: 4 },
-  secureSubtitle: { fontSize: 13, color: '#6b7280' },
-
-  paymentMethod: { flexDirection: 'row', alignItems: 'center', padding: 14, backgroundColor: '#eef2ff', borderRadius: 20 },
-  paymentIcon: { backgroundColor: '#fff', borderRadius: 12, padding: 10, marginRight: 12 },
-  paymentTitle: { color: '#1e3a8a', fontWeight: 'bold', fontSize: 15 },
-  paymentSubtitle: { color: '#c7d2fe', fontSize: 12 },
-
-  bottom: { padding: 16, borderTopWidth: 1, borderTopColor: '#e5e7eb', backgroundColor: '#fff' },
-  confirmBtn: { borderRadius: 24, paddingVertical: 16, marginBottom: 10, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 10 },
-  confirmText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-  backBtn: { alignItems: 'center', paddingVertical: 12 },
-  backText: { color: '#6b7280', fontWeight: '600' },
+  container: { flex: 1 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 18, paddingVertical: 12, margin: 12, borderRadius: 16, backgroundColor: '#fff' },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  listContent: { paddingHorizontal: 12, paddingBottom: 90 },
+  fab: { position: 'absolute', bottom: 20, right: 20, borderRadius: 30, elevation: 6 },
+  logoutBtn: { backgroundColor: '#fff' },
 });
